@@ -145,7 +145,7 @@ export function ProblemPage({
         ) : (
           <div className="grid gap-3">
             {attempts.map((attempt, index) => {
-              const notes = attempt.notes || (index === 0 ? problem.legacyAttemptNotes : "") || "";
+              const notes = attempt.notes;
               return (
                 <button
                   key={attempt._id}

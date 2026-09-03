@@ -59,7 +59,7 @@ export function AttemptPage({
   }
 
   const attemptNumber = attempts.length - index;
-  const notes = attempt.notes || (index === 0 ? problem.legacyAttemptNotes : "") || "";
+  const notes = attempt.notes;
 
   const handleDelete = async () => {
     if (!window.confirm("Delete this attempt? This cannot be undone.")) return;

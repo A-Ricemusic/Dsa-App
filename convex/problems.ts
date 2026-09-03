@@ -10,11 +10,7 @@ import schema from "./schema";
 
 const CLEANUP_BATCH_SIZE = 100;
 
-function cleanProblem(args: {
-  name: string;
-  url: string;
-  thoughts?: string;
-}) {
+function cleanProblem(args: { name: string; url: string }) {
   const name = args.name.trim();
   const url = args.url.trim();
   if (name.length < 2 || name.length > 120) {
@@ -26,11 +22,7 @@ function cleanProblem(args: {
   } catch {
     throw new ConvexError("Enter a valid http or https problem link.");
   }
-  const legacyThoughts = args.thoughts?.trim();
-  if (legacyThoughts && legacyThoughts.length > 4000) {
-    throw new ConvexError("Thoughts must be 4,000 characters or fewer.");
-  }
-  return { name, url, legacyThoughts };
+  return { name, url };
 }
 
 async function setCategories(
@@ -134,7 +126,6 @@ export const create = mutation({
     difficulty: difficultyValidator,
     categoryIds: v.array(v.id("categories")),
     firstAttempt: v.optional(attemptInputValidator),
-    thoughts: v.optional(v.string()),
   },
   returns: v.id("problems"),
   handler: async (ctx, args) => {
@@ -148,9 +139,6 @@ export const create = mutation({
       ownerId,
       name: cleaned.name,
       url: cleaned.url,
-      ...(firstAttempt || !cleaned.legacyThoughts
-        ? {}
-        : { thoughts: cleaned.legacyThoughts }),
       difficulty: args.difficulty,
       attemptCount: firstAttempt ? 1 : 0,
       latestAttemptAt: firstAttempt?.attemptedAt,
@@ -183,7 +171,6 @@ export const update = mutation({
     url: v.string(),
     difficulty: difficultyValidator,
     categoryIds: v.array(v.id("categories")),
-    thoughts: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -196,9 +183,6 @@ export const update = mutation({
     await ctx.db.patch(args.problemId, {
       name: cleaned.name,
       url: cleaned.url,
-      ...(cleaned.legacyThoughts === undefined
-        ? {}
-        : { thoughts: cleaned.legacyThoughts }),
       difficulty: args.difficulty,
       updatedAt: Date.now(),
     });

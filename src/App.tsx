@@ -75,7 +75,6 @@ function Tracker({
   const categories = useQuery(api.categories.list);
   const assignments = useQuery(api.problems.listCategoryAssignments);
   const ensureDefaults = useMutation(api.categories.ensureDefaults);
-  const migrateLegacyNotes = useMutation(api.attempts.migrateLegacyNotes);
   const removeProblem = useMutation(api.problems.remove);
   const { route, navigate } = useAppRoute();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -83,8 +82,8 @@ function Tracker({
   const [editingId, setEditingId] = useState<ProblemId>();
 
   useEffect(() => {
-    void ensureDefaults().then(() => migrateLegacyNotes());
-  }, [ensureDefaults, migrateLegacyNotes]);
+    void ensureDefaults();
+  }, [ensureDefaults]);
 
   const problems = useMemo<ProblemWithCategories[]>(() => {
     if (!rawProblems || !categories || !assignments) return [];
@@ -96,12 +95,10 @@ function Tracker({
       idsByProblem.set(assignment.problemId, ids);
     }
     return rawProblems.map((problem) => {
-      const { thoughts: legacyAttemptNotes, ...problemFields } = problem;
       const categoryIds = idsByProblem.get(problem._id) ?? [];
       return {
-        ...problemFields,
+        ...problem,
         categoryIds,
-        legacyAttemptNotes,
         categories: categoryIds
           .map((categoryId) => categoryById.get(categoryId))
           .filter((category) => category !== undefined),
