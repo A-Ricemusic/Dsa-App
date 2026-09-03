@@ -45,7 +45,7 @@ export function Dashboard({
 
   return (
     <div className="page-wrap">
-      <section className="relative overflow-hidden rounded-[2rem] bg-ink p-7 text-white shadow-soft sm:p-9 lg:p-11">
+      <section className="relative overflow-hidden rounded-[2rem] bg-deep p-7 text-white shadow-soft sm:p-9 lg:p-11">
         <div className="hero-grid absolute inset-0 opacity-30" />
         <div className="relative max-w-2xl">
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/75">

@@ -150,7 +150,7 @@ export function ProblemForm({
                 onClick={() => setDifficulty(value)}
                 className={`rounded-xl px-3 py-2.5 text-sm font-semibold capitalize transition ${
                   difficulty === value
-                    ? "bg-white text-ink shadow-sm"
+                    ? "bg-surface text-ink shadow-sm"
                     : "text-muted hover:text-ink"
                 }`}
               >
@@ -186,7 +186,7 @@ export function ProblemForm({
               <button
                 type="button"
                 onClick={() => void handleCreateCategory()}
-                className="mb-1 flex w-full items-center gap-2 rounded-xl bg-accent-soft px-3 py-2.5 text-left text-sm font-semibold text-accent-dark"
+                className="mb-1 flex w-full items-center gap-2 rounded-xl bg-accent-soft px-3 py-2.5 text-left text-sm font-semibold text-accent-ink"
               >
                 <Plus size={15} /> Create “{categorySearch.trim()}”
               </button>
@@ -202,7 +202,7 @@ export function ProblemForm({
                     className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                       active
                         ? "border-accent bg-accent text-white"
-                        : "border-line bg-white text-muted hover:border-stone hover:text-ink"
+                        : "border-line bg-surface text-muted hover:border-stone hover:text-ink"
                     }`}
                   >
                     {active ? <Check size={13} /> : <Tag size={13} />}

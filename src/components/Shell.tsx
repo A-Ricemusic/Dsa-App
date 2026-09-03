@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import type { View } from "../lib/types";
+import { ThemeToggle } from "./Theme";
 
 const navigation = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
@@ -48,14 +49,17 @@ export function Shell({
     <div className="min-h-screen bg-canvas text-ink">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-line bg-canvas/90 px-4 backdrop-blur lg:hidden">
         <Logo compact />
-        <button className="icon-button" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X size={19} /> : <Menu size={20} />}
-          <span className="sr-only">Toggle navigation</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button className="icon-button" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X size={19} /> : <Menu size={20} />}
+            <span className="sr-only">Toggle navigation</span>
+          </button>
+        </div>
       </header>
 
       {mobileOpen && (
-        <div className="fixed inset-x-0 top-16 z-40 border-b border-line bg-white p-4 shadow-soft lg:hidden">
+        <div className="fixed inset-x-0 top-16 z-40 border-b border-line bg-surface p-4 shadow-soft lg:hidden">
           <nav className="space-y-1">
             {navigation.map((item) => (
               <NavButton
@@ -73,12 +77,12 @@ export function Shell({
         </div>
       )}
 
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-68 flex-col bg-ink px-4 py-5 text-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-68 flex-col bg-deep px-4 py-5 text-white lg:flex">
         <div className="px-2">
           <Logo />
         </div>
         <button className="sidebar-add mt-8" onClick={onAddProblem}>
-          <span className="grid size-7 place-items-center rounded-lg bg-white text-ink">
+          <span className="grid size-7 place-items-center rounded-lg bg-white text-deep">
             <Plus size={16} />
           </span>
           Add a problem
@@ -104,6 +108,9 @@ export function Shell({
         </nav>
 
         <div className="mt-auto">
+          <div className="mb-3">
+            <ThemeToggle showLabel />
+          </div>
           <div className="mb-4 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-lime">
               <Command size={14} /> Deliberate practice
@@ -113,7 +120,7 @@ export function Shell({
             </p>
           </div>
           <div className="group flex items-center gap-3 rounded-2xl p-2 transition hover:bg-white/[0.05]">
-            <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-lime text-xs font-bold text-ink">
+            <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-lime text-xs font-bold text-deep">
               {userName.slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -133,7 +140,7 @@ export function Shell({
 
       <main className="pb-20 lg:ml-68 lg:pb-0">{children}</main>
 
-      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-3 rounded-2xl border border-white/10 bg-ink/95 p-1.5 shadow-modal backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-3 rounded-2xl border border-white/10 bg-deep/95 p-1.5 shadow-modal backdrop-blur lg:hidden">
         {navigation.map((item) => (
           <button
             key={item.id}
@@ -154,7 +161,7 @@ export function Shell({
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="relative grid size-9 place-items-center overflow-hidden rounded-xl bg-lime text-sm font-black text-ink">
+      <div className="relative grid size-9 place-items-center overflow-hidden rounded-xl bg-lime text-sm font-black text-deep">
         R
         <span className="absolute -bottom-1 -right-1 size-3 rounded-full bg-accent" />
       </div>
@@ -193,7 +200,7 @@ function NavButton({
             ? "bg-white/10 text-white"
             : "text-white/50 hover:bg-white/[0.05] hover:text-white/80"
           : active
-            ? "bg-accent-soft text-accent-dark"
+            ? "bg-accent-soft text-accent-ink"
             : "text-muted hover:bg-canvas hover:text-ink"
       }`}
     >

@@ -99,7 +99,7 @@ export function ProblemsView({
         </button>
       </div>
 
-      <section className="mt-8 rounded-[1.75rem] border border-line bg-white p-4 shadow-card sm:p-5">
+      <section className="mt-8 rounded-[1.75rem] border border-line bg-surface p-4 shadow-card sm:p-5">
         <div className="grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_repeat(4,minmax(8rem,auto))]">
           <label className="relative">
             <Search
@@ -207,7 +207,7 @@ export function ProblemsView({
           />
         ) : (
           <>
-            <div className="hidden overflow-hidden rounded-[1.75rem] border border-line bg-white shadow-card md:block">
+            <div className="hidden overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-card md:block">
               <div className="grid grid-cols-[minmax(16rem,1.7fr)_8rem_9rem_7rem_8rem_2rem] items-center gap-4 border-b border-line bg-canvas/60 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
                 <span>Problem</span>
                 <span>Difficulty</span>
@@ -256,7 +256,7 @@ export function ProblemsView({
                 <button
                   key={problem._id}
                   onClick={() => onOpenProblem(problem)}
-                  className="rounded-3xl border border-line bg-white p-5 text-left shadow-card"
+                  className="rounded-3xl border border-line bg-surface p-5 text-left shadow-card"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">

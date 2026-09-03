@@ -2,9 +2,12 @@
 
 @theme {
   --color-canvas: #f6f4ee;
+  --color-surface: #ffffff;
   --color-ink: #18221d;
+  --color-deep: #18221d;
   --color-accent: #2b7a59;
   --color-accent-dark: #1c5d43;
+  --color-accent-ink: #1c5d43;
   --color-accent-soft: #e1f0e8;
   --color-lime: #d3f57f;
   --color-muted: #747a74;
@@ -14,6 +17,18 @@
   --color-review: #3f3359;
   --color-review-light: #725b9c;
   --color-danger: #b6483e;
+  --color-tone-green: #047857;
+  --color-tone-green-bg: #ecfdf5;
+  --color-tone-amber: #b45309;
+  --color-tone-amber-bg: #fffbeb;
+  --color-tone-red: #b91c1c;
+  --color-tone-red-bg: #fef2f2;
+  --color-tone-orange: #c2410c;
+  --color-tone-orange-bg: #fff7ed;
+  --color-tone-blue: #1d4ed8;
+  --color-tone-blue-bg: #eff6ff;
+  --color-tone-purple: #7e22ce;
+  --color-tone-purple-bg: #faf5ff;
   --font-display: Georgia, Cambria, "Times New Roman", serif;
   --shadow-card: 0 1px 2px rgb(24 34 29 / 0.03), 0 8px 28px rgb(24 34 29 / 0.035);
   --shadow-soft: 0 18px 55px rgb(24 34 29 / 0.1);
@@ -36,10 +51,44 @@
     text-rendering: optimizeLegibility;
   }
 
+  html[data-theme="dark"] {
+    --color-canvas: #0f1713;
+    --color-surface: #17211c;
+    --color-ink: #f2f5f0;
+    --color-accent: #56b98a;
+    --color-accent-dark: #358a64;
+    --color-accent-ink: #83d4ad;
+    --color-accent-soft: #203b30;
+    --color-muted: #9ea9a2;
+    --color-line: #2a3831;
+    --color-mist: #1d2923;
+    --color-stone: #55645c;
+    --color-review: #5b4779;
+    --color-review-light: #b9a1dc;
+    --color-danger: #f28b82;
+    --color-tone-green: #72d9aa;
+    --color-tone-green-bg: #193229;
+    --color-tone-amber: #f6c667;
+    --color-tone-amber-bg: #342b18;
+    --color-tone-red: #f69b96;
+    --color-tone-red-bg: #38201f;
+    --color-tone-orange: #f5a970;
+    --color-tone-orange-bg: #38271d;
+    --color-tone-blue: #8db5ff;
+    --color-tone-blue-bg: #1d2b43;
+    --color-tone-purple: #c8a7ec;
+    --color-tone-purple-bg: #302540;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.16), 0 10px 32px rgb(0 0 0 / 0.14);
+    --shadow-soft: 0 18px 55px rgb(0 0 0 / 0.28);
+  }
+
   body {
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    transition: background-color 180ms ease, color 180ms ease;
   }
 
   button,
@@ -74,7 +123,7 @@
   }
 
   .panel {
-    @apply rounded-[1.75rem] border border-line bg-white shadow-card;
+    @apply rounded-[1.75rem] border border-line bg-surface shadow-card;
   }
 
   .panel-header {
@@ -99,11 +148,11 @@
   }
 
   .button-secondary {
-    @apply border border-line bg-white text-ink hover:border-stone hover:bg-canvas;
+    @apply border border-line bg-surface text-ink hover:border-stone hover:bg-mist;
   }
 
   .button-light {
-    @apply bg-lime text-ink hover:-translate-y-0.5 hover:bg-white;
+    @apply bg-lime text-deep hover:-translate-y-0.5 hover:bg-white;
   }
 
   .button-dark-ghost {
@@ -119,15 +168,19 @@
   }
 
   .text-button {
-    @apply inline-flex items-center gap-1.5 text-xs font-bold text-accent transition hover:text-accent-dark;
+    @apply inline-flex items-center gap-1.5 text-xs font-bold text-accent transition hover:text-accent-ink;
   }
 
   .icon-button {
-    @apply grid size-9 shrink-0 place-items-center rounded-xl border border-line bg-white text-muted transition hover:bg-mist hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent;
+    @apply grid size-9 shrink-0 place-items-center rounded-xl border border-line bg-surface text-muted transition hover:bg-mist hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent;
   }
 
   .sidebar-add {
-    @apply flex w-full items-center gap-3 rounded-xl bg-lime px-2.5 py-2 text-sm font-extrabold text-ink transition hover:bg-white;
+    @apply flex w-full items-center gap-3 rounded-xl bg-lime px-2.5 py-2 text-sm font-extrabold text-deep transition hover:bg-white;
+  }
+
+  .theme-toggle {
+    @apply inline-flex h-11 items-center gap-2 rounded-xl border border-line bg-surface text-sm font-bold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-stone hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent;
   }
 
   .field {
@@ -143,7 +196,7 @@
   .field textarea,
   .input,
   .select {
-    @apply mt-2 w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-stone focus:border-accent/60 focus:ring-3 focus:ring-accent/10;
+    @apply mt-2 w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-stone focus:border-accent/60 focus:ring-3 focus:ring-accent/10;
   }
 
   .input,
@@ -176,15 +229,15 @@
   }
 
   .difficulty-easy {
-    @apply bg-emerald-50 text-emerald-700;
+    @apply bg-tone-green-bg text-tone-green;
   }
 
   .difficulty-medium {
-    @apply bg-amber-50 text-amber-700;
+    @apply bg-tone-amber-bg text-tone-amber;
   }
 
   .difficulty-hard {
-    @apply bg-red-50 text-red-700;
+    @apply bg-tone-red-bg text-tone-red;
   }
 
   .grade {
@@ -192,31 +245,31 @@
   }
 
   .grade-a {
-    @apply bg-emerald-100 text-emerald-700;
+    @apply bg-tone-green-bg text-tone-green;
   }
 
   .grade-b {
-    @apply bg-lime/60 text-green-800;
+    @apply bg-lime/60 text-deep;
   }
 
   .grade-c {
-    @apply bg-amber-100 text-amber-700;
+    @apply bg-tone-amber-bg text-tone-amber;
   }
 
   .grade-d {
-    @apply bg-orange-100 text-orange-700;
+    @apply bg-tone-orange-bg text-tone-orange;
   }
 
   .grade-f {
-    @apply bg-red-100 text-red-700;
+    @apply bg-tone-red-bg text-tone-red;
   }
 
   .grade-choice {
-    @apply grid aspect-square place-items-center rounded-xl border border-line bg-white text-sm font-black text-muted transition hover:border-stone hover:text-ink;
+    @apply grid aspect-square place-items-center rounded-xl border border-line bg-surface text-sm font-black text-muted transition hover:border-stone hover:text-ink;
   }
 
   .grade-choice-active {
-    @apply border-ink bg-ink text-white shadow-sm hover:border-ink hover:text-white;
+    @apply border-deep bg-deep text-white shadow-sm hover:border-deep hover:text-white;
   }
 
   .grade-bar {
@@ -239,11 +292,11 @@
   }
 
   .review-pill {
-    @apply bg-purple-50 text-review-light;
+    @apply bg-tone-purple-bg text-review-light;
   }
 
   .mastered-pill {
-    @apply bg-emerald-50 text-emerald-700;
+    @apply bg-tone-green-bg text-tone-green;
   }
 
   .mini-stat {
@@ -262,13 +315,13 @@
     @apply grid size-11 shrink-0 place-items-center rounded-2xl;
   }
 
-  .stat-green { @apply bg-emerald-50 text-emerald-700; }
-  .stat-orange { @apply bg-orange-50 text-orange-700; }
-  .stat-blue { @apply bg-blue-50 text-blue-700; }
-  .stat-purple { @apply bg-purple-50 text-purple-700; }
+  .stat-green { @apply bg-tone-green-bg text-tone-green; }
+  .stat-orange { @apply bg-tone-orange-bg text-tone-orange; }
+  .stat-blue { @apply bg-tone-blue-bg text-tone-blue; }
+  .stat-purple { @apply bg-tone-purple-bg text-tone-purple; }
 
   .filter-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-bold text-muted transition hover:border-stone hover:text-ink;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-bold text-muted transition hover:border-stone hover:text-ink;
   }
 
   .filter-chip-active {
@@ -290,8 +343,8 @@
 
 .hero-grid {
   background-image:
-    linear-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--color-ink) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-ink) 7%, transparent) 1px, transparent 1px);
   background-size: 42px 42px;
   mask-image: linear-gradient(to right, black, transparent 80%);
 }

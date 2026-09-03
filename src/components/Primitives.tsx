@@ -33,7 +33,7 @@ export function Modal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-0 backdrop-blur-[3px] sm:items-center sm:p-5"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-deep/55 p-0 backdrop-blur-[3px] sm:items-center sm:p-5"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -42,9 +42,9 @@ export function Modal({
         aria-modal="true"
         role="dialog"
         aria-labelledby="dialog-title"
-        className={`max-h-[94vh] w-full ${width} overflow-y-auto rounded-t-[2rem] bg-white shadow-modal sm:rounded-[2rem]`}
+        className={`max-h-[94vh] w-full ${width} overflow-y-auto rounded-t-[2rem] bg-surface shadow-modal sm:rounded-[2rem]`}
       >
-        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-line bg-white/95 px-6 py-5 backdrop-blur sm:px-8">
+        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-line bg-surface/95 px-6 py-5 backdrop-blur sm:px-8">
           <div>
             {eyebrow && <p className="eyebrow">{eyebrow}</p>}
             <h2 id="dialog-title" className="mt-1 font-display text-2xl text-ink">
@@ -116,7 +116,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="grid min-h-72 place-items-center rounded-[1.75rem] border border-dashed border-stone bg-white/50 px-6 text-center">
+    <div className="grid min-h-72 place-items-center rounded-[1.75rem] border border-dashed border-stone bg-surface/50 px-6 text-center">
       <div className="max-w-sm py-10">
         <div className="mx-auto mb-5 grid size-12 place-items-center rounded-2xl bg-mist text-muted">
           <AlertTriangle size={20} />

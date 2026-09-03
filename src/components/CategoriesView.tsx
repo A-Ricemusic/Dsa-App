@@ -84,7 +84,7 @@ export function CategoriesView({
       <section className="mt-8 grid gap-6 lg:grid-cols-[21rem_minmax(0,1fr)]">
         <div>
           <form onSubmit={handleCreate} className="panel p-6 lg:sticky lg:top-6">
-            <div className="grid size-10 place-items-center rounded-xl bg-ink text-white">
+            <div className="grid size-10 place-items-center rounded-xl bg-deep text-white">
               <Plus size={18} />
             </div>
             <h2 className="mt-5 font-display text-2xl text-ink">Add your own</h2>
@@ -153,10 +153,10 @@ export function CategoriesView({
                 return (
                   <article
                     key={category._id}
-                    className="group rounded-3xl border border-line bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:border-stone hover:shadow-soft"
+                    className="group rounded-3xl border border-line bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:border-stone hover:shadow-soft"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="grid size-10 place-items-center rounded-xl bg-mist text-accent-dark">
+                      <div className="grid size-10 place-items-center rounded-xl bg-mist text-accent-ink">
                         <Tag size={17} />
                       </div>
                       <button
