@@ -8,13 +8,25 @@
  * @module
  */
 
+import type * as attempts from "../attempts.js";
+import type * as categories from "../categories.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_validators from "../lib/validators.js";
+import type * as problems from "../problems.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  attempts: typeof attempts;
+  categories: typeof categories;
+  "lib/auth": typeof lib_auth;
+  "lib/validators": typeof lib_validators;
+  problems: typeof problems;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

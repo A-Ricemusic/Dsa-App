@@ -1,0 +1,209 @@
+import { ConvexError, v } from "convex/values";
+import { internal } from "./_generated/api";
+import { internalMutation, mutation, query } from "./_generated/server";
+import { requireOwnerId } from "./lib/auth";
+import schema from "./schema";
+
+const DEFAULT_CATEGORIES = [
+  "Arrays",
+  "Strings",
+  "Hash Table",
+  "Math",
+  "Dynamic Programming",
+  "Sorting",
+  "Greedy",
+  "Depth-First Search",
+  "Binary Search",
+  "Trees",
+  "Breadth-First Search",
+  "Matrix",
+  "Two Pointers",
+  "Bit Manipulation",
+  "Binary Tree",
+  "Prefix Sum",
+  "Stack",
+  "Heap / Priority Queue",
+  "Simulation",
+  "Counting",
+  "Graph Theory",
+  "Design",
+  "Sliding Window",
+  "Backtracking",
+  "Union Find",
+  "Enumeration",
+  "Linked List",
+  "Ordered Set",
+  "Monotonic Stack",
+  "Trie",
+  "Number Theory",
+  "Divide and Conquer",
+  "Recursion",
+  "Bitmask",
+  "Queue",
+  "Binary Search Tree",
+  "Segment Tree",
+  "Memoization",
+  "Geometry",
+  "Combinatorics",
+  "Topological Sort",
+  "Hash Function",
+  "Binary Indexed Tree",
+  "Game Theory",
+  "String Matching",
+  "Shortest Path",
+  "Interactive",
+  "Rolling Hash",
+  "Data Stream",
+  "Brainteaser",
+  "Monotonic Queue",
+  "Randomized",
+  "Merge Sort",
+  "Doubly-Linked List",
+  "Counting Sort",
+  "Iterator",
+  "Probability and Statistics",
+  "Quickselect",
+  "Suffix Array",
+  "Bucket Sort",
+  "Line Sweep",
+  "Minimum Spanning Tree",
+  "Reservoir Sampling",
+  "Strongly Connected Component",
+  "Eulerian Circuit",
+  "Radix Sort",
+  "Rejection Sampling",
+  "Biconnected Component",
+  "Deque",
+  "Search",
+  "Database",
+] as const;
+
+function normalizeName(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+const CLEANUP_BATCH_SIZE = 100;
+
+export const cleanupDeletedCategory = internalMutation({
+  args: { categoryId: v.id("categories") },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const assignments = await ctx.db
+      .query("problemCategories")
+      .withIndex("by_categoryId", (q) => q.eq("categoryId", args.categoryId))
+      .take(CLEANUP_BATCH_SIZE);
+
+    for (const assignment of assignments) {
+      await ctx.db.delete(assignment._id);
+    }
+
+    if (assignments.length === CLEANUP_BATCH_SIZE) {
+      await ctx.scheduler.runAfter(0, internal.categories.cleanupDeletedCategory, args);
+    }
+    return null;
+  },
+});
+
+export const list = query({
+  args: {},
+  returns: v.array(schema.doc("categories")),
+  handler: async (ctx) => {
+    const ownerId = await requireOwnerId(ctx);
+    const categories = await ctx.db
+      .query("categories")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
+      .take(250);
+    return categories.sort((a, b) => a.name.localeCompare(b.name));
+  },
+});
+
+export const ensureDefaults = mutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    const ownerId = await requireOwnerId(ctx);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
+      .unique();
+
+    if (profile?.defaultCategoriesSeededAt) return 0;
+
+    const now = Date.now();
+    let inserted = 0;
+    for (const name of DEFAULT_CATEGORIES) {
+      const normalizedName = normalizeName(name);
+      const existing = await ctx.db
+        .query("categories")
+        .withIndex("by_ownerId_and_normalizedName", (q) =>
+          q.eq("ownerId", ownerId).eq("normalizedName", normalizedName),
+        )
+        .unique();
+      if (!existing) {
+        await ctx.db.insert("categories", {
+          ownerId,
+          name,
+          normalizedName,
+          isDefault: true,
+          createdAt: now,
+        });
+        inserted += 1;
+      }
+    }
+
+    if (profile) {
+      await ctx.db.patch(profile._id, { defaultCategoriesSeededAt: now });
+    } else {
+      await ctx.db.insert("profiles", {
+        ownerId,
+        defaultCategoriesSeededAt: now,
+      });
+    }
+    return inserted;
+  },
+});
+
+export const create = mutation({
+  args: { name: v.string() },
+  returns: v.id("categories"),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    const name = args.name.trim().replace(/\s+/g, " ");
+    if (name.length < 2 || name.length > 48) {
+      throw new ConvexError("Category names must be between 2 and 48 characters.");
+    }
+    const normalizedName = normalizeName(name);
+    const existing = await ctx.db
+      .query("categories")
+      .withIndex("by_ownerId_and_normalizedName", (q) =>
+        q.eq("ownerId", ownerId).eq("normalizedName", normalizedName),
+      )
+      .unique();
+    if (existing) throw new ConvexError("That category already exists.");
+
+    return await ctx.db.insert("categories", {
+      ownerId,
+      name,
+      normalizedName,
+      isDefault: false,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const remove = mutation({
+  args: { categoryId: v.id("categories") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    const category = await ctx.db.get(args.categoryId);
+    if (!category || category.ownerId !== ownerId) {
+      throw new ConvexError("Category not found.");
+    }
+    await ctx.db.delete(args.categoryId);
+    await ctx.scheduler.runAfter(0, internal.categories.cleanupDeletedCategory, {
+      categoryId: args.categoryId,
+    });
+    return null;
+  },
+});
