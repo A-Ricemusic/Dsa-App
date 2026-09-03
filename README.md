@@ -47,6 +47,11 @@ bun run dev
 
 Also add the production callback, `/login` sign-in URL, and production origin to WorkOS. Set `WORKOS_CLIENT_ID` on the production Convex deployment before deploying its functions.
 
+Because this is a client-only Vite application, AuthKit keeps its rotating refresh
+token in browser-managed storage. Sessions therefore survive new deployments and
+hard refreshes on the same production origin. Vercel preview URLs are separate
+origins and intentionally do not share a session with the production URL.
+
 ## Commands
 
 ```bash

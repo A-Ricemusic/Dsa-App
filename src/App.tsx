@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@workos-inc/authkit-react";
 import {
-  Authenticated,
-  AuthLoading,
-  Unauthenticated,
   useMutation,
+  useConvexAuth,
   useQuery,
 } from "convex/react";
-import { ArrowRight, BrainCircuit, Check, Layers3, LockKeyhole, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BrainCircuit,
+  Check,
+  Layers3,
+  LockKeyhole,
+  RefreshCcw,
+  Sparkles,
+} from "lucide-react";
 import { api } from "../convex/_generated/api";
 import type {
   AttemptId,
@@ -27,38 +33,42 @@ import { ThemeToggle } from "./components/Theme";
 
 export default function App() {
   const { isLoading, user, signIn, signOut } = useAuth();
+  const {
+    isLoading: isConvexLoading,
+    isAuthenticated: isConvexAuthenticated,
+  } = useConvexAuth();
   const isCallback = window.location.pathname === "/callback";
+
+  const beginSignIn = () => {
+    const { pathname, search, hash } = window.location;
+    const returnTo = pathname === "/login" || pathname === "/callback"
+      ? "/"
+      : `${pathname}${search}${hash}`;
+    return signIn({ state: { returnTo } });
+  };
 
   useEffect(() => {
     if (window.location.pathname === "/login" && !isLoading && !user) {
-      void signIn();
+      void signIn({ state: { returnTo: "/" } });
     }
   }, [isLoading, signIn, user]);
 
-  if (isLoading) return <FullPageLoading />;
+  if (isLoading || (user && isConvexLoading)) return <FullPageLoading />;
 
   if (isCallback && !user) {
-    return <AuthCallbackError onRetry={() => void signIn()} />;
+    return <AuthCallbackError onRetry={() => void beginSignIn()} />;
   }
 
+  if (!user) return <Landing onSignIn={() => void beginSignIn()} />;
+
+  if (!isConvexAuthenticated) return <AuthConnectionError />;
+
   return (
-    <>
-      <AuthLoading>
-        <FullPageLoading />
-      </AuthLoading>
-      <Authenticated>
-        {user && (
-          <Tracker
-            firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
-            email={user.email}
-            onSignOut={() => signOut({ returnTo: window.location.origin })}
-          />
-        )}
-      </Authenticated>
-      <Unauthenticated>
-        <Landing onSignIn={() => void signIn()} />
-      </Unauthenticated>
-    </>
+    <Tracker
+      firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
+      email={user.email}
+      onSignOut={() => signOut({ returnTo: window.location.origin })}
+    />
   );
 }
 
@@ -391,6 +401,27 @@ function FullPageLoading() {
   return (
     <main className="grid min-h-screen place-items-center bg-canvas">
       <Spinner label="Checking your session" />
+    </main>
+  );
+}
+
+function AuthConnectionError() {
+  return (
+    <main className="grid min-h-screen place-items-center bg-canvas px-6">
+      <section className="w-full max-w-md rounded-[2rem] border border-line bg-surface p-8 text-center shadow-soft sm:p-10">
+        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent">
+          <BrainCircuit size={20} />
+        </div>
+        <p className="eyebrow mt-6">Session connected</p>
+        <h1 className="mt-2 font-display text-3xl text-ink">Your journal couldn’t connect.</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">
+          WorkOS restored your session, but Convex did not accept the current access token.
+          Reload once to request a fresh token.
+        </p>
+        <button className="button-primary mt-7" onClick={() => window.location.reload()}>
+          Retry connection <RefreshCcw size={15} />
+        </button>
+      </section>
     </main>
   );
 }
