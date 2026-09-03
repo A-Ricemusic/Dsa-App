@@ -6,19 +6,27 @@ import type {
   Category,
   CategoryId,
   Difficulty,
+  Grade,
+  ProblemId,
   ProblemWithCategories,
 } from "../lib/types";
-import { getErrorMessage } from "../lib/utils";
-import { Modal } from "./Primitives";
+import {
+  dateInputValue,
+  getErrorMessage,
+  inputDateTimestamp,
+} from "../lib/utils";
+import { Modal, Toggle } from "./Primitives";
 
 export function ProblemForm({
   open,
   onClose,
+  onCreated,
   problem,
   categories,
 }: {
   open: boolean;
   onClose: () => void;
+  onCreated?: (problemId: ProblemId) => void;
   problem?: ProblemWithCategories;
   categories: Category[];
 }) {
@@ -28,8 +36,12 @@ export function ProblemForm({
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  const [thoughts, setThoughts] = useState("");
   const [selected, setSelected] = useState<Set<CategoryId>>(new Set());
+  const [includeAttempt, setIncludeAttempt] = useState(true);
+  const [attemptedAt, setAttemptedAt] = useState(dateInputValue());
+  const [grade, setGrade] = useState<Grade>("B");
+  const [shouldReviewAgain, setShouldReviewAgain] = useState(false);
+  const [notes, setNotes] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -39,8 +51,12 @@ export function ProblemForm({
     setName(problem?.name ?? "");
     setUrl(problem?.url ?? "");
     setDifficulty(problem?.difficulty ?? "medium");
-    setThoughts(problem?.thoughts ?? "");
     setSelected(new Set(problem?.categoryIds ?? []));
+    setIncludeAttempt(true);
+    setAttemptedAt(dateInputValue());
+    setGrade("B");
+    setShouldReviewAgain(false);
+    setNotes("");
     setCategorySearch("");
     setError("");
   }, [open, problem]);
@@ -91,14 +107,26 @@ export function ProblemForm({
       name,
       url,
       difficulty,
-      thoughts,
       categoryIds: [...selected],
     };
     try {
       if (problem) {
         await updateProblem({ problemId: problem._id, ...values });
       } else {
-        await createProblem(values);
+        const problemId = await createProblem({
+          ...values,
+          ...(includeAttempt
+            ? {
+                firstAttempt: {
+                  attemptedAt: inputDateTimestamp(attemptedAt),
+                  grade,
+                  shouldReviewAgain,
+                  notes,
+                },
+              }
+            : {}),
+        });
+        onCreated?.(problemId);
       }
       onClose();
     } catch (caught) {
@@ -114,6 +142,7 @@ export function ProblemForm({
       onClose={onClose}
       eyebrow={problem ? "Edit entry" : "New entry"}
       title={problem ? "Update problem" : "Add a problem"}
+      width="max-w-3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-7 px-6 py-7 sm:px-8">
         <div className="grid gap-5 sm:grid-cols-2">
@@ -214,17 +243,67 @@ export function ProblemForm({
           </div>
         </div>
 
-        <label className="field">
-          <span>Overall thoughts</span>
-          <textarea
-            rows={5}
-            maxLength={4000}
-            value={thoughts}
-            onChange={(event) => setThoughts(event.target.value)}
-            placeholder="What clicked? What tripped you up? Leave a note for your future self."
-          />
-          <small>{thoughts.length}/4,000</small>
-        </label>
+        {!problem && (
+          <section className="rounded-[1.5rem] border border-line bg-canvas/55 p-5 sm:p-6">
+            <Toggle
+              checked={includeAttempt}
+              onChange={setIncludeAttempt}
+              label="I attempted this problem"
+              description="Turn this off if you’re only adding it to your library."
+            />
+
+            {includeAttempt && (
+              <div className="mt-6 space-y-5 border-t border-line pt-6">
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <label className="field">
+                    <span>Date attempted</span>
+                    <input
+                      required
+                      type="date"
+                      value={attemptedAt}
+                      onChange={(event) => setAttemptedAt(event.target.value)}
+                    />
+                  </label>
+
+                  <fieldset>
+                    <legend className="field-label">How did it go?</legend>
+                    <div className="mt-2 grid grid-cols-5 gap-2">
+                      {(["A", "B", "C", "D", "F"] as const).map((value) => (
+                        <button
+                          type="button"
+                          key={value}
+                          onClick={() => setGrade(value)}
+                          className={`grade-choice ${grade === value ? "grade-choice-active" : ""}`}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+                </div>
+
+                <Toggle
+                  checked={shouldReviewAgain}
+                  onChange={setShouldReviewAgain}
+                  label="Review this again"
+                  description="The newest attempt controls whether this problem enters your review queue."
+                />
+
+                <label className="field">
+                  <span>Attempt notes</span>
+                  <textarea
+                    rows={5}
+                    maxLength={4000}
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="What clicked? What tripped you up? Leave context for your future self."
+                  />
+                  <small>{notes.length}/4,000</small>
+                </label>
+              </div>
+            )}
+          </section>
+        )}
 
         {error && <p className="form-error">{error}</p>}
 

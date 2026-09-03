@@ -19,6 +19,8 @@ export default defineSchema({
   profiles: defineTable({
     ownerId: v.string(),
     defaultCategoriesSeededAt: v.optional(v.number()),
+    attemptNotesMigrationStartedAt: v.optional(v.number()),
+    attemptNotesMigratedAt: v.optional(v.number()),
   }).index("by_ownerId", ["ownerId"]),
 
   problems: defineTable({
@@ -26,7 +28,8 @@ export default defineSchema({
     name: v.string(),
     url: v.string(),
     difficulty,
-    thoughts: v.string(),
+    // Temporary compatibility field while existing notes move onto attempts.
+    thoughts: v.optional(v.string()),
     attemptCount: v.number(),
     latestAttemptAt: v.optional(v.number()),
     latestGrade: v.optional(grade),
@@ -47,6 +50,7 @@ export default defineSchema({
     attemptedAt: v.number(),
     grade,
     shouldReviewAgain: v.boolean(),
+    notes: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

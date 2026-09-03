@@ -4,7 +4,8 @@ import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireOwnerId } from "./lib/auth";
-import { difficultyValidator } from "./lib/validators";
+import { cleanAttemptInput } from "./lib/attempts";
+import { attemptInputValidator, difficultyValidator } from "./lib/validators";
 import schema from "./schema";
 
 const CLEANUP_BATCH_SIZE = 100;
@@ -12,16 +13,12 @@ const CLEANUP_BATCH_SIZE = 100;
 function cleanProblem(args: {
   name: string;
   url: string;
-  thoughts: string;
+  thoughts?: string;
 }) {
   const name = args.name.trim();
   const url = args.url.trim();
-  const thoughts = args.thoughts.trim();
   if (name.length < 2 || name.length > 120) {
     throw new ConvexError("Problem names must be between 2 and 120 characters.");
-  }
-  if (thoughts.length > 4000) {
-    throw new ConvexError("Thoughts must be 4,000 characters or fewer.");
   }
   try {
     const parsed = new URL(url);
@@ -29,7 +26,11 @@ function cleanProblem(args: {
   } catch {
     throw new ConvexError("Enter a valid http or https problem link.");
   }
-  return { name, url, thoughts };
+  const legacyThoughts = args.thoughts?.trim();
+  if (legacyThoughts && legacyThoughts.length > 4000) {
+    throw new ConvexError("Thoughts must be 4,000 characters or fewer.");
+  }
+  return { name, url, legacyThoughts };
 }
 
 async function setCategories(
@@ -131,23 +132,45 @@ export const create = mutation({
     name: v.string(),
     url: v.string(),
     difficulty: difficultyValidator,
-    thoughts: v.string(),
     categoryIds: v.array(v.id("categories")),
+    firstAttempt: v.optional(attemptInputValidator),
+    thoughts: v.optional(v.string()),
   },
   returns: v.id("problems"),
   handler: async (ctx, args) => {
     const ownerId = await requireOwnerId(ctx);
     const cleaned = cleanProblem(args);
     const now = Date.now();
+    const firstAttempt = args.firstAttempt
+      ? { ...args.firstAttempt, ...cleanAttemptInput(args.firstAttempt) }
+      : undefined;
     const problemId = await ctx.db.insert("problems", {
       ownerId,
-      ...cleaned,
+      name: cleaned.name,
+      url: cleaned.url,
+      ...(firstAttempt || !cleaned.legacyThoughts
+        ? {}
+        : { thoughts: cleaned.legacyThoughts }),
       difficulty: args.difficulty,
-      attemptCount: 0,
-      latestShouldReview: false,
+      attemptCount: firstAttempt ? 1 : 0,
+      latestAttemptAt: firstAttempt?.attemptedAt,
+      latestGrade: firstAttempt?.grade,
+      latestShouldReview: firstAttempt?.shouldReviewAgain ?? false,
       createdAt: now,
       updatedAt: now,
     });
+    if (firstAttempt) {
+      await ctx.db.insert("attempts", {
+        ownerId,
+        problemId,
+        attemptedAt: firstAttempt.attemptedAt,
+        grade: firstAttempt.grade,
+        shouldReviewAgain: firstAttempt.shouldReviewAgain,
+        notes: firstAttempt.notes,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
     await setCategories(ctx, ownerId, problemId, args.categoryIds);
     return problemId;
   },
@@ -159,8 +182,8 @@ export const update = mutation({
     name: v.string(),
     url: v.string(),
     difficulty: difficultyValidator,
-    thoughts: v.string(),
     categoryIds: v.array(v.id("categories")),
+    thoughts: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -171,7 +194,11 @@ export const update = mutation({
     }
     const cleaned = cleanProblem(args);
     await ctx.db.patch(args.problemId, {
-      ...cleaned,
+      name: cleaned.name,
+      url: cleaned.url,
+      ...(cleaned.legacyThoughts === undefined
+        ? {}
+        : { thoughts: cleaned.legacyThoughts }),
       difficulty: args.difficulty,
       updatedAt: Date.now(),
     });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@workos-inc/authkit-react";
 import {
   Authenticated,
@@ -9,11 +9,17 @@ import {
 } from "convex/react";
 import { ArrowRight, BrainCircuit, Check, Layers3, LockKeyhole, Sparkles } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import type { ProblemId, ProblemWithCategories, View } from "./lib/types";
+import type {
+  AttemptId,
+  ProblemId,
+  ProblemWithCategories,
+  View,
+} from "./lib/types";
+import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
 import { Dashboard } from "./components/Dashboard";
-import { ProblemDetail } from "./components/ProblemDetail";
 import { ProblemForm } from "./components/ProblemForm";
+import { ProblemPage } from "./components/ProblemPage";
 import { ProblemsView } from "./components/ProblemsView";
 import { Shell } from "./components/Shell";
 import { Spinner } from "./components/Primitives";
@@ -69,16 +75,16 @@ function Tracker({
   const categories = useQuery(api.categories.list);
   const assignments = useQuery(api.problems.listCategoryAssignments);
   const ensureDefaults = useMutation(api.categories.ensureDefaults);
+  const migrateLegacyNotes = useMutation(api.attempts.migrateLegacyNotes);
   const removeProblem = useMutation(api.problems.remove);
-  const [view, setView] = useState<View>("dashboard");
+  const { route, navigate } = useAppRoute();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<ProblemId>();
-  const [selectedId, setSelectedId] = useState<ProblemId>();
 
   useEffect(() => {
-    void ensureDefaults();
-  }, [ensureDefaults]);
+    void ensureDefaults().then(() => migrateLegacyNotes());
+  }, [ensureDefaults, migrateLegacyNotes]);
 
   const problems = useMemo<ProblemWithCategories[]>(() => {
     if (!rawProblems || !categories || !assignments) return [];
@@ -90,10 +96,12 @@ function Tracker({
       idsByProblem.set(assignment.problemId, ids);
     }
     return rawProblems.map((problem) => {
+      const { thoughts: legacyAttemptNotes, ...problemFields } = problem;
       const categoryIds = idsByProblem.get(problem._id) ?? [];
       return {
-        ...problem,
+        ...problemFields,
         categoryIds,
+        legacyAttemptNotes,
         categories: categoryIds
           .map((categoryId) => categoryById.get(categoryId))
           .filter((category) => category !== undefined),
@@ -101,7 +109,6 @@ function Tracker({
     });
   }, [rawProblems, categories, assignments]);
 
-  const selectedProblem = problems.find((problem) => problem._id === selectedId);
   const editingProblem = problems.find((problem) => problem._id === editingId);
   const loading = rawProblems === undefined || categories === undefined || assignments === undefined;
 
@@ -112,15 +119,98 @@ function Tracker({
   };
 
   const openEdit = (problem: ProblemWithCategories) => {
-    setSelectedId(undefined);
     setEditingId(problem._id);
     setFormOpen(true);
   };
 
+  const activeView: View = route.kind === "dashboard"
+    ? "dashboard"
+    : route.kind === "categories"
+      ? "categories"
+      : "problems";
+
+  const changeView = (view: View) => {
+    navigate(view === "dashboard" ? "/" : `/${view}`);
+  };
+
+  const renderRoute = () => {
+    if (loading) {
+      return (
+        <div className="grid min-h-[80vh] place-items-center">
+          <Spinner label="Opening your journal" />
+        </div>
+      );
+    }
+
+    if (route.kind === "dashboard") {
+      return (
+        <Dashboard
+          problems={problems}
+          firstName={firstName}
+          onAddProblem={openCreate}
+          onOpenProblem={(problem) => navigate(`/problems/${problem._id}`)}
+          onSeeAll={() => navigate("/problems")}
+        />
+      );
+    }
+
+    if (route.kind === "problems") {
+      return (
+        <ProblemsView
+          problems={problems}
+          categories={categories ?? []}
+          onAddProblem={openCreate}
+          onOpenProblem={(problem) => navigate(`/problems/${problem._id}`)}
+        />
+      );
+    }
+
+    if (route.kind === "categories") {
+      return <CategoriesView categories={categories ?? []} problems={problems} />;
+    }
+
+    const problem = problems.find((item) => item._id === route.problemId);
+    if (!problem) {
+      return (
+        <MissingPage
+          title="Problem not found"
+          description="This problem may have been deleted, or the link may no longer be valid."
+          onBack={() => navigate("/problems")}
+        />
+      );
+    }
+
+    if (route.kind === "attempt") {
+      return (
+        <AttemptPage
+          problem={problem}
+          attemptId={route.attemptId}
+          onBack={() => navigate(`/problems/${problem._id}`)}
+          onDeleted={() => navigate(`/problems/${problem._id}`, { replace: true })}
+        />
+      );
+    }
+
+    return (
+      <ProblemPage
+        problem={problem}
+        onBack={() => navigate("/problems")}
+        onOpenAttempt={(attempt) =>
+          navigate(`/problems/${problem._id}/attempts/${attempt._id}`)
+        }
+        onEdit={() => openEdit(problem)}
+        onDelete={async () => {
+          await removeProblem({ problemId: problem._id });
+          navigate("/problems", { replace: true });
+        }}
+      />
+    );
+  };
+
   return (
     <Shell
-      view={view}
-      onViewChange={setView}
+      view={activeView}
+      onViewChange={changeView}
       onAddProblem={openCreate}
       onSignOut={onSignOut}
       userName={firstName}
@@ -128,28 +218,7 @@ function Tracker({
       mobileOpen={mobileOpen}
       setMobileOpen={setMobileOpen}
     >
-      {loading ? (
-        <div className="grid min-h-[80vh] place-items-center">
-          <Spinner label="Opening your journal" />
-        </div>
-      ) : view === "dashboard" ? (
-        <Dashboard
-          problems={problems}
-          firstName={firstName}
-          onAddProblem={openCreate}
-          onOpenProblem={(problem) => setSelectedId(problem._id)}
-          onSeeAll={() => setView("problems")}
-        />
-      ) : view === "problems" ? (
-        <ProblemsView
-          problems={problems}
-          categories={categories}
-          onAddProblem={openCreate}
-          onOpenProblem={(problem) => setSelectedId(problem._id)}
-        />
-      ) : (
-        <CategoriesView categories={categories} problems={problems} />
-      )}
+      {renderRoute()}
 
       <ProblemForm
         open={formOpen}
@@ -159,16 +228,78 @@ function Tracker({
         }}
         problem={editingProblem}
         categories={categories ?? []}
-      />
-      <ProblemDetail
-        problem={selectedProblem}
-        onClose={() => setSelectedId(undefined)}
-        onEdit={openEdit}
-        onDelete={async (problem) => {
-          await removeProblem({ problemId: problem._id });
-        }}
+        onCreated={(problemId) => navigate(`/problems/${problemId}`)}
       />
     </Shell>
+  );
+}
+
+type AppRoute =
+  | { kind: "dashboard" }
+  | { kind: "problems" }
+  | { kind: "categories" }
+  | { kind: "problem"; problemId: ProblemId }
+  | { kind: "attempt"; problemId: ProblemId; attemptId: AttemptId };
+
+function routeFromPath(pathname: string): AppRoute {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length === 0) return { kind: "dashboard" };
+  if (parts.length === 1 && parts[0] === "problems") return { kind: "problems" };
+  if (parts.length === 1 && parts[0] === "categories") return { kind: "categories" };
+  if (parts.length === 2 && parts[0] === "problems") {
+    return { kind: "problem", problemId: parts[1] as ProblemId };
+  }
+  if (parts.length === 4 && parts[0] === "problems" && parts[2] === "attempts") {
+    return {
+      kind: "attempt",
+      problemId: parts[1] as ProblemId,
+      attemptId: parts[3] as AttemptId,
+    };
+  }
+  return { kind: "dashboard" };
+}
+
+function useAppRoute() {
+  const [route, setRoute] = useState(() => routeFromPath(window.location.pathname));
+
+  useEffect(() => {
+    const handlePopState = () => setRoute(routeFromPath(window.location.pathname));
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const navigate = useCallback((path: string, options?: { replace?: boolean }) => {
+    if (window.location.pathname !== path) {
+      if (options?.replace) window.history.replaceState({}, "", path);
+      else window.history.pushState({}, "", path);
+    }
+    setRoute(routeFromPath(path));
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  return { route, navigate };
+}
+
+function MissingPage({
+  title,
+  description,
+  onBack,
+}: {
+  title: string;
+  description: string;
+  onBack: () => void;
+}) {
+  return (
+    <div className="page-wrap">
+      <section className="panel mx-auto max-w-xl p-8 text-center sm:p-10">
+        <p className="eyebrow">Nothing here</p>
+        <h1 className="mt-2 font-display text-3xl text-ink">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
+        <button className="button-primary mt-7" onClick={onBack}>
+          Back to problems
+        </button>
+      </section>
+    </div>
   );
 }
 

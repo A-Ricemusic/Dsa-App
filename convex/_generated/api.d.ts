@@ -10,6 +10,7 @@
 
 import type * as attempts from "../attempts.js";
 import type * as categories from "../categories.js";
+import type * as lib_attempts from "../lib/attempts.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as problems from "../problems.js";
@@ -23,6 +24,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   attempts: typeof attempts;
   categories: typeof categories;
+  "lib/attempts": typeof lib_attempts;
   "lib/auth": typeof lib_auth;
   "lib/validators": typeof lib_validators;
   problems: typeof problems;

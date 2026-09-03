@@ -13,3 +13,10 @@ export const gradeValidator = v.union(
   v.literal("D"),
   v.literal("F"),
 );
+
+export const attemptInputValidator = v.object({
+  attemptedAt: v.number(),
+  grade: gradeValidator,
+  shouldReviewAgain: v.boolean(),
+  notes: v.string(),
+});

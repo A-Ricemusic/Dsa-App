@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
+  ArrowRight,
   ArrowUpDown,
-  ExternalLink,
   Filter,
   Plus,
   RefreshCcw,
@@ -242,7 +242,7 @@ export function ProblemsView({
                     </div>
                     <span className="text-sm font-semibold text-ink">{problem.attemptCount}</span>
                     <span className="text-xs text-muted">{formatShortDate(problem.latestAttemptAt)}</span>
-                    <ExternalLink
+                    <ArrowRight
                       size={15}
                       className="text-stone transition group-hover:text-accent"
                     />
