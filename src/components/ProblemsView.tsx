@@ -2,7 +2,12 @@ import { useMemo, useState } from "react";
 import {
   ArrowRight,
   ArrowUpDown,
+  BookOpenCheck,
+  ChartNoAxesColumnIncreasing,
+  ChevronsUpDown,
   Filter,
+  Gauge,
+  Layers3,
   Plus,
   RefreshCcw,
   Search,
@@ -16,8 +21,51 @@ import type {
 } from "../lib/types";
 import { formatShortDate, sortProblems } from "../lib/utils";
 import { DifficultyBadge, EmptyState, GradeBadge } from "./Primitives";
+import { SearchableSelect, type SearchableOption } from "./SearchableSelect";
 
 type GradeFilter = "all" | Grade | "strong" | "unattempted";
+type ReviewFilter = "all" | "review" | "no-review";
+
+const DIFFICULTY_OPTIONS: SearchableOption<"all" | Difficulty>[] = [
+  { value: "all", label: "All difficulties", keywords: ["any"] },
+  { value: "easy", label: "Easy" },
+  { value: "medium", label: "Medium" },
+  { value: "hard", label: "Hard" },
+];
+
+const GRADE_OPTIONS: SearchableOption<GradeFilter>[] = [
+  { value: "all", label: "All grades", keywords: ["any"] },
+  { value: "strong", label: "Strong (A or B)", keywords: ["a", "b", "best"] },
+  { value: "A", label: "Grade A", keywords: ["a"] },
+  { value: "B", label: "Grade B", keywords: ["b"] },
+  { value: "C", label: "Grade C", keywords: ["c"] },
+  { value: "D", label: "Grade D", keywords: ["d"] },
+  { value: "F", label: "Grade F", keywords: ["f"] },
+  { value: "unattempted", label: "Not attempted", keywords: ["none", "new"] },
+];
+
+const REVIEW_OPTIONS: SearchableOption<ReviewFilter>[] = [
+  { value: "all", label: "All review states", keywords: ["any"] },
+  {
+    value: "review",
+    label: "Review again",
+    description: "Latest attempt says review",
+    keywords: ["yes", "needed"],
+  },
+  {
+    value: "no-review",
+    label: "No review needed",
+    description: "Latest attempt says no",
+    keywords: ["no", "solid", "mastered"],
+  },
+];
+
+const SORT_OPTIONS: SearchableOption<SortKey>[] = [
+  { value: "recent", label: "Most recent", keywords: ["latest", "newest", "date"] },
+  { value: "attempts", label: "Most attempted", keywords: ["count", "repetitions"] },
+  { value: "grade", label: "Best latest grade", keywords: ["performance", "score"] },
+  { value: "name", label: "Name A–Z", keywords: ["alphabetical", "alphabetic"] },
+];
 
 export function ProblemsView({
   problems,
@@ -34,8 +82,19 @@ export function ProblemsView({
   const [difficulty, setDifficulty] = useState<"all" | Difficulty>("all");
   const [grade, setGrade] = useState<GradeFilter>("all");
   const [categoryId, setCategoryId] = useState("all");
-  const [reviewOnly, setReviewOnly] = useState(false);
+  const [review, setReview] = useState<ReviewFilter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
+
+  const categoryOptions = useMemo<SearchableOption<string>[]>(
+    () => [
+      { value: "all", label: "All categories", keywords: ["any"] },
+      ...categories.map((category) => ({
+        value: category._id,
+        label: category.name,
+      })),
+    ],
+    [categories],
+  );
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase();
@@ -57,7 +116,12 @@ export function ProblemsView({
       const matchesCategory =
         categoryId === "all" ||
         problem.categoryIds.some((id) => id === categoryId);
-      const matchesReview = !reviewOnly || problem.latestShouldReview;
+      const matchesReview =
+        review === "all" ||
+        (review === "review" && problem.latestShouldReview) ||
+        (review === "no-review" &&
+          problem.attemptCount > 0 &&
+          !problem.latestShouldReview);
       return (
         matchesSearch &&
         matchesDifficulty &&
@@ -67,21 +131,21 @@ export function ProblemsView({
       );
     });
     return sortProblems(matches, sort);
-  }, [problems, search, difficulty, grade, categoryId, reviewOnly, sort]);
+  }, [problems, search, difficulty, grade, categoryId, review, sort]);
 
   const hasFilters =
     search ||
     difficulty !== "all" ||
     grade !== "all" ||
     categoryId !== "all" ||
-    reviewOnly;
+    review !== "all";
 
   const clearFilters = () => {
     setSearch("");
     setDifficulty("all");
     setGrade("all");
     setCategoryId("all");
-    setReviewOnly(false);
+    setReview("all");
   };
 
   return (
@@ -100,77 +164,76 @@ export function ProblemsView({
       </div>
 
       <section className="mt-8 rounded-[1.75rem] border border-line bg-surface p-4 shadow-card sm:p-5">
-        <div className="grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_repeat(4,minmax(8rem,auto))]">
-          <label className="relative">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(16rem,1.7fr)_repeat(5,minmax(9rem,1fr))]">
+          <label className="relative sm:col-span-2 lg:col-span-3 2xl:col-span-1">
             <Search
               size={16}
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
             />
             <input
-              className="input pl-10"
+              className="input min-h-12 pl-10"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search problems or categories"
+              aria-label="Search problems or categories"
             />
           </label>
-          <select
-            className="select"
+          <SearchableSelect
+            label="Difficulty"
+            searchPlaceholder="Search easy, medium, or hard"
             value={difficulty}
-            onChange={(event) => setDifficulty(event.target.value as "all" | Difficulty)}
-            aria-label="Filter by difficulty"
-          >
-            <option value="all">All difficulties</option>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-          <select
-            className="select"
+            options={DIFFICULTY_OPTIONS}
+            onChange={setDifficulty}
+            icon={<Gauge size={15} />}
+          />
+          <SearchableSelect
+            label="Latest grade"
+            searchPlaceholder="Search A, B, C, D, or F"
             value={grade}
-            onChange={(event) => setGrade(event.target.value as GradeFilter)}
-            aria-label="Filter by latest grade"
-          >
-            <option value="all">All grades</option>
-            <option value="strong">Strong (A or B)</option>
-            <option value="A">Grade A</option>
-            <option value="B">Grade B</option>
-            <option value="C">Grade C</option>
-            <option value="D">Grade D</option>
-            <option value="F">Grade F</option>
-            <option value="unattempted">Not attempted</option>
-          </select>
-          <select
-            className="select"
+            options={GRADE_OPTIONS}
+            onChange={setGrade}
+            icon={<ChartNoAxesColumnIncreasing size={15} />}
+          />
+          <SearchableSelect
+            label="Category"
+            searchPlaceholder="Search categories"
             value={categoryId}
-            onChange={(event) => setCategoryId(event.target.value)}
-            aria-label="Filter by category"
-          >
-            <option value="all">All categories</option>
-            {categories.map((category) => (
-              <option value={category._id} key={category._id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="select"
+            options={categoryOptions}
+            onChange={setCategoryId}
+            icon={<Layers3 size={15} />}
+          />
+          <SearchableSelect
+            label="Review status"
+            searchPlaceholder="Search review status"
+            value={review}
+            options={REVIEW_OPTIONS}
+            onChange={setReview}
+            icon={<BookOpenCheck size={15} />}
+            align="end"
+          />
+          <SearchableSelect
+            label="Sort order"
+            searchPlaceholder="Search sort options"
             value={sort}
-            onChange={(event) => setSort(event.target.value as SortKey)}
-            aria-label="Sort problems"
-          >
-            <option value="recent">Most recent</option>
-            <option value="attempts">Most attempted</option>
-            <option value="grade">Best latest grade</option>
-            <option value="name">Name A–Z</option>
-          </select>
+            options={SORT_OPTIONS}
+            onChange={setSort}
+            icon={<ChevronsUpDown size={15} />}
+            align="end"
+          />
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-          <button
-            onClick={() => setReviewOnly((current) => !current)}
-            className={`filter-chip ${reviewOnly ? "filter-chip-active" : ""}`}
-          >
-            <RefreshCcw size={13} /> Review again only
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {review === "review" && (
+              <span className="filter-chip filter-chip-active">
+                <RefreshCcw size={13} /> Latest attempt: review again
+              </span>
+            )}
+            {review === "no-review" && (
+              <span className="filter-chip filter-chip-active">
+                <BookOpenCheck size={13} /> Latest attempt: no review
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3 text-xs text-muted">
             <span>
               Showing <strong className="text-ink">{filtered.length}</strong> of {problems.length}
