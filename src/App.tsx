@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "@workos-inc/authkit-react";
 import { useMutation, useConvexAuth, useQuery } from "convex/react";
 import {
   ArrowRight,
@@ -11,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
+import { useAuth } from "./auth/AuthProvider";
 import type { AttemptId, ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
@@ -31,12 +31,12 @@ export default function App() {
     const { pathname, search, hash } = window.location;
     const returnTo =
       pathname === "/login" || pathname === "/callback" ? "/" : `${pathname}${search}${hash}`;
-    return signIn({ state: { returnTo } });
+    return signIn(returnTo);
   };
 
   useEffect(() => {
     if (window.location.pathname === "/login" && !isLoading && !user) {
-      void signIn({ state: { returnTo: "/" } });
+      void signIn("/");
     }
   }, [isLoading, signIn, user]);
 
@@ -54,7 +54,7 @@ export default function App() {
     <Tracker
       firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
       email={user.email}
-      onSignOut={() => signOut({ returnTo: window.location.origin })}
+      onSignOut={() => void signOut()}
     />
   );
 }
