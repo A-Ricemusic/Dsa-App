@@ -1,11 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-const difficulty = v.union(
-  v.literal("easy"),
-  v.literal("medium"),
-  v.literal("hard"),
-);
+const difficulty = v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"));
 
 const grade = v.union(
   v.literal("A"),
@@ -35,10 +31,7 @@ export default defineSchema({
   })
     .index("by_ownerId", ["ownerId"])
     .index("by_ownerId_and_updatedAt", ["ownerId", "updatedAt"])
-    .index("by_ownerId_and_latestShouldReview", [
-      "ownerId",
-      "latestShouldReview",
-    ]),
+    .index("by_ownerId_and_latestShouldReview", ["ownerId", "latestShouldReview"]),
 
   attempts: defineTable({
     ownerId: v.string(),

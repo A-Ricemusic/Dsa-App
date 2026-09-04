@@ -72,9 +72,7 @@ export const cleanupDeletedProblem = internalMutation({
   handler: async (ctx, args): Promise<null> => {
     const attempts = await ctx.db
       .query("attempts")
-      .withIndex("by_problemId_and_attemptedAt", (q) =>
-        q.eq("problemId", args.problemId),
-      )
+      .withIndex("by_problemId_and_attemptedAt", (q) => q.eq("problemId", args.problemId))
       .take(CLEANUP_BATCH_SIZE);
     const assignments = await ctx.db
       .query("problemCategories")
@@ -84,10 +82,7 @@ export const cleanupDeletedProblem = internalMutation({
     for (const attempt of attempts) await ctx.db.delete(attempt._id);
     for (const assignment of assignments) await ctx.db.delete(assignment._id);
 
-    if (
-      attempts.length === CLEANUP_BATCH_SIZE ||
-      assignments.length === CLEANUP_BATCH_SIZE
-    ) {
+    if (attempts.length === CLEANUP_BATCH_SIZE || assignments.length === CLEANUP_BATCH_SIZE) {
       await ctx.scheduler.runAfter(0, internal.problems.cleanupDeletedProblem, args);
     }
     return null;

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -48,8 +49,7 @@ export function SearchableSelect<Value extends string>({
 
     const exactMatches = options.filter(
       (option) =>
-        option.value.toLocaleLowerCase() === needle ||
-        option.label.toLocaleLowerCase() === needle,
+        option.value.toLocaleLowerCase() === needle || option.label.toLocaleLowerCase() === needle,
     );
     if (exactMatches.length > 0) return exactMatches;
 
@@ -60,11 +60,11 @@ export function SearchableSelect<Value extends string>({
     );
   }, [options, query]);
 
-  const close = (restoreFocus = false) => {
+  const close = useCallback((restoreFocus = false) => {
     setOpen(false);
     setQuery("");
     if (restoreFocus) requestAnimationFrame(() => triggerRef.current?.focus());
-  };
+  }, []);
 
   const openMenu = () => {
     const selectedIndex = options.findIndex((option) => option.value === value);
@@ -92,11 +92,9 @@ export function SearchableSelect<Value extends string>({
       document.removeEventListener("pointerdown", handlePointerDown);
       if (lockPageScroll) document.body.style.overflow = previousOverflow;
     };
-  }, [open]);
+  }, [close, open]);
 
-  useEffect(() => {
-    if (highlightedIndex >= filteredOptions.length) setHighlightedIndex(0);
-  }, [filteredOptions.length, highlightedIndex]);
+  const activeIndex = Math.min(highlightedIndex, Math.max(0, filteredOptions.length - 1));
 
   const handleListKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -121,7 +119,7 @@ export function SearchableSelect<Value extends string>({
       setHighlightedIndex(filteredOptions.length - 1);
     } else if (event.key === "Enter") {
       event.preventDefault();
-      const option = filteredOptions[highlightedIndex];
+      const option = filteredOptions[activeIndex];
       if (option) selectOption(option);
     }
   };
@@ -203,8 +201,8 @@ export function SearchableSelect<Value extends string>({
                   aria-expanded="true"
                   aria-controls={listboxId}
                   aria-activedescendant={
-                    filteredOptions[highlightedIndex]
-                      ? `${listboxId}-${filteredOptions[highlightedIndex].value}`
+                    filteredOptions[activeIndex]
+                      ? `${listboxId}-${filteredOptions[activeIndex].value}`
                       : undefined
                   }
                   autoComplete="off"
@@ -239,7 +237,7 @@ export function SearchableSelect<Value extends string>({
               ) : (
                 filteredOptions.map((option, index) => {
                   const isSelected = option.value === value;
-                  const isHighlighted = index === highlightedIndex;
+                  const isHighlighted = index === activeIndex;
                   return (
                     <button
                       id={`${listboxId}-${option.value}`}

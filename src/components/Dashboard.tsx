@@ -60,10 +60,7 @@ export function Dashboard({
               <Plus size={17} /> Add a problem
             </button>
             {reviewQueue.length > 0 && (
-              <button
-                className="button-dark-ghost"
-                onClick={() => onOpenProblem(reviewQueue[0]!)}
-              >
+              <button className="button-dark-ghost" onClick={() => onOpenProblem(reviewQueue[0]!)}>
                 Start review queue <ArrowRight size={16} />
               </button>
             )}
@@ -173,7 +170,10 @@ export function Dashboard({
               </div>
               <div className="mt-7 flex h-36 items-end justify-between gap-3">
                 {counts.map(({ grade, count }) => (
-                  <div key={grade} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                  <div
+                    key={grade}
+                    className="flex h-full flex-1 flex-col items-center justify-end gap-2"
+                  >
                     <span className="text-xs font-semibold text-muted">{count}</span>
                     <div
                       className={`grade-bar grade-bar-${grade.toLowerCase()}`}

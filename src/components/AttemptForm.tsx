@@ -2,11 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Attempt, Grade, ProblemId } from "../lib/types";
-import {
-  dateInputValue,
-  getErrorMessage,
-  inputDateTimestamp,
-} from "../lib/utils";
+import { dateInputValue, getErrorMessage, inputDateTimestamp } from "../lib/utils";
 import { Modal, Toggle } from "./Primitives";
 
 export function AttemptForm({

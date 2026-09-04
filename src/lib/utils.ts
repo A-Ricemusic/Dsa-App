@@ -38,10 +38,7 @@ export function inputDateTimestamp(value: string) {
 export function averageGrade(problems: ProblemWithCategories[]) {
   const graded = problems.filter((problem) => problem.latestGrade);
   if (graded.length === 0) return "—";
-  const total = graded.reduce(
-    (sum, problem) => sum + GRADE_POINTS[problem.latestGrade!],
-    0,
-  );
+  const total = graded.reduce((sum, problem) => sum + GRADE_POINTS[problem.latestGrade!], 0);
   const average = total / graded.length;
   if (average >= 3.5) return "A";
   if (average >= 2.5) return "B";

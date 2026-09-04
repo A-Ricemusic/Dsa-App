@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import {
-  ArrowLeft,
-  CalendarDays,
-  ExternalLink,
-  Pencil,
-  RefreshCcw,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, Pencil, RefreshCcw, Trash2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { AttemptId, ProblemWithCategories } from "../lib/types";
 import { formatDate, getErrorMessage } from "../lib/utils";
@@ -92,11 +85,7 @@ export function AttemptPage({
           <button className="button-primary" onClick={() => setEditing(true)}>
             <Pencil size={15} /> Edit attempt
           </button>
-          <button
-            className="button-danger"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
-          >
+          <button className="button-danger" onClick={() => void handleDelete()} disabled={deleting}>
             <Trash2 size={15} /> {deleting ? "Deleting…" : "Delete"}
           </button>
         </div>
@@ -115,7 +104,9 @@ export function AttemptPage({
               </div>
             </div>
             {attempt.shouldReviewAgain ? (
-              <span className="review-pill"><RefreshCcw size={12} /> Review again</span>
+              <span className="review-pill">
+                <RefreshCcw size={12} /> Review again
+              </span>
             ) : (
               <span className="mastered-pill">Feeling solid</span>
             )}
@@ -136,7 +127,9 @@ export function AttemptPage({
             <div className="mt-4 flex flex-wrap gap-2">
               <DifficultyBadge difficulty={problem.difficulty} />
               {problem.categories.map((category) => (
-                <span className="tag" key={category._id}>{category.name}</span>
+                <span className="tag" key={category._id}>
+                  {category.name}
+                </span>
               ))}
             </div>
             <a
@@ -151,7 +144,9 @@ export function AttemptPage({
 
           <section className="rounded-[1.75rem] bg-review p-6 text-white shadow-soft">
             <p className="text-xs font-semibold text-white/60">Practice context</p>
-            <p className="mt-3 font-display text-3xl">{attemptNumber} of {attempts.length}</p>
+            <p className="mt-3 font-display text-3xl">
+              {attemptNumber} of {attempts.length}
+            </p>
             <p className="mt-2 text-sm leading-6 text-white/65">
               Every attempt keeps its own grade, review decision, and reflection.
             </p>

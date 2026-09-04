@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@workos-inc/authkit-react";
-import {
-  useMutation,
-  useConvexAuth,
-  useQuery,
-} from "convex/react";
+import { useMutation, useConvexAuth, useQuery } from "convex/react";
 import {
   ArrowRight,
   BrainCircuit,
@@ -15,12 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import type {
-  AttemptId,
-  ProblemId,
-  ProblemWithCategories,
-  View,
-} from "./lib/types";
+import type { AttemptId, ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
 import { Dashboard } from "./components/Dashboard";
@@ -33,17 +24,13 @@ import { ThemeToggle } from "./components/Theme";
 
 export default function App() {
   const { isLoading, user, signIn, signOut } = useAuth();
-  const {
-    isLoading: isConvexLoading,
-    isAuthenticated: isConvexAuthenticated,
-  } = useConvexAuth();
+  const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const isCallback = window.location.pathname === "/callback";
 
   const beginSignIn = () => {
     const { pathname, search, hash } = window.location;
-    const returnTo = pathname === "/login" || pathname === "/callback"
-      ? "/"
-      : `${pathname}${search}${hash}`;
+    const returnTo =
+      pathname === "/login" || pathname === "/callback" ? "/" : `${pathname}${search}${hash}`;
     return signIn({ state: { returnTo } });
   };
 
@@ -117,7 +104,8 @@ function Tracker({
   }, [rawProblems, categories, assignments]);
 
   const editingProblem = problems.find((problem) => problem._id === editingId);
-  const loading = rawProblems === undefined || categories === undefined || assignments === undefined;
+  const loading =
+    rawProblems === undefined || categories === undefined || assignments === undefined;
 
   const openCreate = () => {
     setEditingId(undefined);
@@ -130,11 +118,12 @@ function Tracker({
     setFormOpen(true);
   };
 
-  const activeView: View = route.kind === "dashboard"
-    ? "dashboard"
-    : route.kind === "categories"
-      ? "categories"
-      : "problems";
+  const activeView: View =
+    route.kind === "dashboard"
+      ? "dashboard"
+      : route.kind === "categories"
+        ? "categories"
+        : "problems";
 
   const changeView = (view: View) => {
     navigate(view === "dashboard" ? "/" : `/${view}`);
@@ -202,9 +191,7 @@ function Tracker({
       <ProblemPage
         problem={problem}
         onBack={() => navigate("/problems")}
-        onOpenAttempt={(attempt) =>
-          navigate(`/problems/${problem._id}/attempts/${attempt._id}`)
-        }
+        onOpenAttempt={(attempt) => navigate(`/problems/${problem._id}/attempts/${attempt._id}`)}
         onEdit={() => openEdit(problem)}
         onDelete={async () => {
           await removeProblem({ problemId: problem._id });
@@ -318,7 +305,9 @@ function Landing({ onSignIn }: { onSignIn: () => void }) {
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6 sm:px-10 lg:px-14">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-xl bg-lime font-black text-deep">R</div>
+            <div className="grid size-10 place-items-center rounded-xl bg-lime font-black text-deep">
+              R
+            </div>
             <span className="font-display text-xl">Recall</span>
           </div>
           <div className="flex items-center gap-2">
@@ -339,13 +328,19 @@ function Landing({ onSignIn }: { onSignIn: () => void }) {
               <span className="block text-lime">Remember more.</span>
             </h1>
             <p className="mt-7 max-w-xl text-base leading-8 text-muted sm:text-lg">
-              A thoughtful practice journal for the problems you solve, the patterns you miss,
-              and the attempts that finally make them stick.
+              A thoughtful practice journal for the problems you solve, the patterns you miss, and
+              the attempts that finally make them stick.
             </p>
             <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-xs text-muted">
-              <span className="flex items-center gap-2"><Check size={14} className="text-lime" /> Private by default</span>
-              <span className="flex items-center gap-2"><Check size={14} className="text-lime" /> Built around attempts</span>
-              <span className="flex items-center gap-2"><Check size={14} className="text-lime" /> Your own categories</span>
+              <span className="flex items-center gap-2">
+                <Check size={14} className="text-lime" /> Private by default
+              </span>
+              <span className="flex items-center gap-2">
+                <Check size={14} className="text-lime" /> Built around attempts
+              </span>
+              <span className="flex items-center gap-2">
+                <Check size={14} className="text-lime" /> Your own categories
+              </span>
             </div>
           </section>
 
@@ -365,11 +360,18 @@ function Landing({ onSignIn }: { onSignIn: () => void }) {
                 <div className="mt-6 space-y-3">
                   {["Minimum Window Substring", "Course Schedule", "Coin Change"].map(
                     (name, index) => (
-                      <div key={name} className="flex items-center gap-3 rounded-2xl bg-canvas p-4 shadow-card">
-                        <span className={`grade grade-${["c", "b", "d"][index]}`}>{["C", "B", "D"][index]}</span>
+                      <div
+                        key={name}
+                        className="flex items-center gap-3 rounded-2xl bg-canvas p-4 shadow-card"
+                      >
+                        <span className={`grade grade-${["c", "b", "d"][index]}`}>
+                          {["C", "B", "D"][index]}
+                        </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold">{name}</p>
-                          <p className="mt-1 text-[11px] text-muted">{index + 2} attempts · Review again</p>
+                          <p className="mt-1 text-[11px] text-muted">
+                            {index + 2} attempts · Review again
+                          </p>
                         </div>
                         <ArrowRight size={14} className="text-stone" />
                       </div>
@@ -415,8 +417,8 @@ function AuthConnectionError() {
         <p className="eyebrow mt-6">Session connected</p>
         <h1 className="mt-2 font-display text-3xl text-ink">Your journal couldn’t connect.</h1>
         <p className="mt-3 text-sm leading-6 text-muted">
-          WorkOS restored your session, but Convex did not accept the current access token.
-          Reload once to request a fresh token.
+          WorkOS restored your session, but Convex did not accept the current access token. Reload
+          once to request a fresh token.
         </p>
         <button className="button-primary mt-7" onClick={() => window.location.reload()}>
           Retry connection <RefreshCcw size={15} />
@@ -436,8 +438,8 @@ function AuthCallbackError({ onRetry }: { onRetry: () => void }) {
         <p className="eyebrow mt-6">Authentication interrupted</p>
         <h1 className="mt-2 font-display text-3xl text-ink">Sign-in couldn’t finish.</h1>
         <p className="mt-3 text-sm leading-6 text-muted">
-          The authentication response could not be completed. Try again; if it repeats,
-          verify the callback URL and allowed origin in WorkOS.
+          The authentication response could not be completed. Try again; if it repeats, verify the
+          callback URL and allowed origin in WorkOS.
         </p>
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button className="button-primary" onClick={onRetry}>

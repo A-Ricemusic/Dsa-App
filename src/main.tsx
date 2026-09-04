@@ -9,8 +9,7 @@ import "./styles.css";
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL ?? import.meta.env.CONVEX_URL;
 const workosClientId = import.meta.env.WORKOS_CLIENT_ID;
-const redirectUri =
-  import.meta.env.WORKOS_REDIRECT_URI || `${window.location.origin}/callback`;
+const redirectUri = import.meta.env.WORKOS_REDIRECT_URI || `${window.location.origin}/callback`;
 
 function safeReturnPath(state: Record<string, unknown> | null | undefined) {
   if (typeof state?.returnTo !== "string") return "/";
@@ -24,11 +23,7 @@ function safeReturnPath(state: Record<string, unknown> | null | undefined) {
   }
 }
 
-function handleAuthRedirect({
-  state,
-}: {
-  state: Record<string, unknown> | null | undefined;
-}) {
+function handleAuthRedirect({ state }: { state: Record<string, unknown> | null | undefined }) {
   window.history.replaceState({}, "", safeReturnPath(state));
   window.dispatchEvent(new PopStateEvent("popstate"));
 }

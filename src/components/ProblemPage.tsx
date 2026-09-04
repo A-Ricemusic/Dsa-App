@@ -57,7 +57,9 @@ export function ProblemPage({
           <div className="flex flex-wrap items-center gap-2">
             <DifficultyBadge difficulty={problem.difficulty} />
             {problem.categories.map((category) => (
-              <span className="tag" key={category._id}>{category.name}</span>
+              <span className="tag" key={category._id}>
+                {category.name}
+              </span>
             ))}
           </div>
           <p className="eyebrow mt-6">Problem journal</p>
@@ -82,11 +84,7 @@ export function ProblemPage({
           <button className="button-secondary" onClick={onEdit}>
             <Pencil size={15} /> Edit problem
           </button>
-          <button
-            className="button-danger"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
-          >
+          <button className="button-danger" onClick={() => void handleDelete()} disabled={deleting}>
             <Trash2 size={15} /> {deleting ? "Deleting…" : "Delete"}
           </button>
         </div>
@@ -112,7 +110,9 @@ export function ProblemPage({
           <p className="text-xs font-semibold text-muted">Last practiced</p>
           <p className="mt-2 text-sm font-bold text-ink">{formatDate(problem.latestAttemptAt)}</p>
           {problem.latestShouldReview && (
-            <span className="review-pill mt-2"><RefreshCcw size={11} /> Review again</span>
+            <span className="review-pill mt-2">
+              <RefreshCcw size={11} /> Review again
+            </span>
           )}
         </article>
       </section>
@@ -154,9 +154,7 @@ export function ProblemPage({
                 >
                   <GradeBadge grade={attempt.grade} large />
                   <div>
-                    <p className="text-sm font-bold text-ink">
-                      Attempt {attempts.length - index}
-                    </p>
+                    <p className="text-sm font-bold text-ink">Attempt {attempts.length - index}</p>
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
                       <CalendarDays size={13} /> {formatDate(attempt.attemptedAt)}
                     </p>
@@ -168,7 +166,9 @@ export function ProblemPage({
                   </div>
                   <div className="flex items-center justify-between gap-4 sm:justify-end">
                     {attempt.shouldReviewAgain ? (
-                      <span className="review-pill"><RefreshCcw size={11} /> Review again</span>
+                      <span className="review-pill">
+                        <RefreshCcw size={11} /> Review again
+                      </span>
                     ) : (
                       <span className="mastered-pill">Feeling solid</span>
                     )}

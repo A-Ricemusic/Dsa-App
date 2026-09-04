@@ -7,11 +7,7 @@ import { cleanAttemptInput } from "./lib/attempts";
 import { attemptInputValidator } from "./lib/validators";
 import schema from "./schema";
 
-async function requireProblem(
-  ctx: MutationCtx,
-  ownerId: string,
-  problemId: Id<"problems">,
-) {
+async function requireProblem(ctx: MutationCtx, ownerId: string, problemId: Id<"problems">) {
   const problem = await ctx.db.get(problemId);
   if (!problem || problem.ownerId !== ownerId) {
     throw new ConvexError("Problem not found.");
@@ -49,9 +45,7 @@ export const listForProblem = query({
     }
     return await ctx.db
       .query("attempts")
-      .withIndex("by_problemId_and_attemptedAt", (q) =>
-        q.eq("problemId", args.problemId),
-      )
+      .withIndex("by_problemId_and_attemptedAt", (q) => q.eq("problemId", args.problemId))
       .order("desc")
       .take(500);
   },

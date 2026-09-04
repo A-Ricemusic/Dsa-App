@@ -1,9 +1,6 @@
 import { ConvexError } from "convex/values";
 
-export function cleanAttemptInput(args: {
-  attemptedAt: number;
-  notes: string;
-}) {
+export function cleanAttemptInput(args: { attemptedAt: number; notes: string }) {
   if (!Number.isFinite(args.attemptedAt) || args.attemptedAt <= 0) {
     throw new ConvexError("Choose a valid attempt date.");
   }

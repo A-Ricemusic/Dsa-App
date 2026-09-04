@@ -89,7 +89,8 @@ export function CategoriesView({
             </div>
             <h2 className="mt-5 font-display text-2xl text-ink">Add your own</h2>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Use a category for a pattern, source, study plan, or anything else you want to filter by.
+              Use a category for a pattern, source, study plan, or anything else you want to filter
+              by.
             </p>
             <label className="field mt-6">
               <span>Category name</span>

@@ -12,13 +12,7 @@ import {
   RefreshCcw,
   Search,
 } from "lucide-react";
-import type {
-  Category,
-  Difficulty,
-  Grade,
-  ProblemWithCategories,
-  SortKey,
-} from "../lib/types";
+import type { Category, Difficulty, Grade, ProblemWithCategories, SortKey } from "../lib/types";
 import { formatShortDate, sortProblems } from "../lib/utils";
 import { DifficultyBadge, EmptyState, GradeBadge } from "./Primitives";
 import { SearchableSelect, type SearchableOption } from "./SearchableSelect";
@@ -102,43 +96,26 @@ export function ProblemsView({
       const matchesSearch =
         !needle ||
         problem.name.toLocaleLowerCase().includes(needle) ||
-        problem.categories.some((category) =>
-          category.name.toLocaleLowerCase().includes(needle),
-        );
-      const matchesDifficulty =
-        difficulty === "all" || problem.difficulty === difficulty;
+        problem.categories.some((category) => category.name.toLocaleLowerCase().includes(needle));
+      const matchesDifficulty = difficulty === "all" || problem.difficulty === difficulty;
       const matchesGrade =
         grade === "all" ||
-        (grade === "strong" &&
-          (problem.latestGrade === "A" || problem.latestGrade === "B")) ||
+        (grade === "strong" && (problem.latestGrade === "A" || problem.latestGrade === "B")) ||
         (grade === "unattempted" && !problem.latestGrade) ||
         problem.latestGrade === grade;
       const matchesCategory =
-        categoryId === "all" ||
-        problem.categoryIds.some((id) => id === categoryId);
+        categoryId === "all" || problem.categoryIds.some((id) => id === categoryId);
       const matchesReview =
         review === "all" ||
         (review === "review" && problem.latestShouldReview) ||
-        (review === "no-review" &&
-          problem.attemptCount > 0 &&
-          !problem.latestShouldReview);
-      return (
-        matchesSearch &&
-        matchesDifficulty &&
-        matchesGrade &&
-        matchesCategory &&
-        matchesReview
-      );
+        (review === "no-review" && problem.attemptCount > 0 && !problem.latestShouldReview);
+      return matchesSearch && matchesDifficulty && matchesGrade && matchesCategory && matchesReview;
     });
     return sortProblems(matches, sort);
   }, [problems, search, difficulty, grade, categoryId, review, sort]);
 
   const hasFilters =
-    search ||
-    difficulty !== "all" ||
-    grade !== "all" ||
-    categoryId !== "all" ||
-    review !== "all";
+    search || difficulty !== "all" || grade !== "all" || categoryId !== "all" || review !== "all";
 
   const clearFilters = () => {
     setSearch("");
@@ -275,7 +252,9 @@ export function ProblemsView({
                 <span>Problem</span>
                 <span>Difficulty</span>
                 <span>Latest</span>
-                <span className="flex items-center gap-1">Attempts <ArrowUpDown size={11} /></span>
+                <span className="flex items-center gap-1">
+                  Attempts <ArrowUpDown size={11} />
+                </span>
                 <span>Practiced</span>
                 <span />
               </div>
@@ -301,10 +280,14 @@ export function ProblemsView({
                     <DifficultyBadge difficulty={problem.difficulty} />
                     <div className="flex items-center gap-2">
                       <GradeBadge grade={problem.latestGrade} />
-                      <span className="text-xs text-muted">{problem.latestGrade ? "Latest" : "None"}</span>
+                      <span className="text-xs text-muted">
+                        {problem.latestGrade ? "Latest" : "None"}
+                      </span>
                     </div>
                     <span className="text-sm font-semibold text-ink">{problem.attemptCount}</span>
-                    <span className="text-xs text-muted">{formatShortDate(problem.latestAttemptAt)}</span>
+                    <span className="text-xs text-muted">
+                      {formatShortDate(problem.latestAttemptAt)}
+                    </span>
                     <ArrowRight
                       size={15}
                       className="text-stone transition group-hover:text-accent"

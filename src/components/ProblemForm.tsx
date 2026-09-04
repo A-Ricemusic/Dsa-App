@@ -10,11 +10,7 @@ import type {
   ProblemId,
   ProblemWithCategories,
 } from "../lib/types";
-import {
-  dateInputValue,
-  getErrorMessage,
-  inputDateTimestamp,
-} from "../lib/utils";
+import { dateInputValue, getErrorMessage, inputDateTimestamp } from "../lib/utils";
 import { Modal, Toggle } from "./Primitives";
 
 export function ProblemForm({
@@ -64,14 +60,11 @@ export function ProblemForm({
   const visibleCategories = useMemo(() => {
     const needle = categorySearch.trim().toLocaleLowerCase();
     if (!needle) return categories;
-    return categories.filter((category) =>
-      category.name.toLocaleLowerCase().includes(needle),
-    );
+    return categories.filter((category) => category.name.toLocaleLowerCase().includes(needle));
   }, [categories, categorySearch]);
 
   const exactMatch = categories.some(
-    (category) =>
-      category.name.toLocaleLowerCase() === categorySearch.trim().toLocaleLowerCase(),
+    (category) => category.name.toLocaleLowerCase() === categorySearch.trim().toLocaleLowerCase(),
   );
 
   const toggleCategory = (categoryId: CategoryId) => {
@@ -149,7 +142,6 @@ export function ProblemForm({
           <label className="field sm:col-span-2">
             <span>Problem name</span>
             <input
-              autoFocus
               required
               maxLength={120}
               value={name}

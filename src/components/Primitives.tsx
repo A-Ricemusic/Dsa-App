@@ -32,17 +32,18 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-deep/55 p-0 backdrop-blur-[3px] sm:items-center sm:p-5"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-5">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default bg-deep/55 backdrop-blur-[3px]"
+        onClick={onClose}
+        aria-label="Close dialog"
+      />
       <section
         aria-modal="true"
         role="dialog"
         aria-labelledby="dialog-title"
-        className={`max-h-[94vh] w-full ${width} overflow-y-auto rounded-t-[2rem] bg-surface shadow-modal sm:rounded-[2rem]`}
+        className={`relative max-h-[94vh] w-full ${width} overflow-y-auto rounded-t-[2rem] bg-surface shadow-modal sm:rounded-[2rem]`}
       >
         <div className="sticky top-0 z-10 flex items-start justify-between border-b border-line bg-surface/95 px-6 py-5 backdrop-blur sm:px-8">
           <div>
@@ -89,7 +90,9 @@ export function Toggle({
     <label className="flex cursor-pointer items-center justify-between gap-5 rounded-2xl border border-line bg-canvas/60 p-4">
       <span>
         <span className="block text-sm font-semibold text-ink">{label}</span>
-        {description && <span className="mt-1 block text-xs leading-5 text-muted">{description}</span>}
+        {description && (
+          <span className="mt-1 block text-xs leading-5 text-muted">{description}</span>
+        )}
       </span>
       <input
         type="checkbox"

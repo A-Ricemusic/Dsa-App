@@ -11,9 +11,7 @@ export default defineConfig(({ mode }) => {
     define: {
       "import.meta.env.CONVEX_URL": JSON.stringify(env.CONVEX_URL ?? ""),
       "import.meta.env.WORKOS_CLIENT_ID": JSON.stringify(env.WORKOS_CLIENT_ID ?? ""),
-      "import.meta.env.WORKOS_REDIRECT_URI": JSON.stringify(
-        env.WORKOS_REDIRECT_URI ?? "",
-      ),
+      "import.meta.env.WORKOS_REDIRECT_URI": JSON.stringify(env.WORKOS_REDIRECT_URI ?? ""),
     },
   };
 });

@@ -1,7 +1,9 @@
 import {
+  useCallback,
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -46,7 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(theme);
   }, [theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme((current) => {
       const next = current === "dark" ? "light" : "dark";
       try {
@@ -56,13 +58,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
       return next;
     });
-  };
+  }, []);
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  const contextValue = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
+
+  return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
 }
 
 export function ThemeToggle({ showLabel = false }: { showLabel?: boolean }) {
