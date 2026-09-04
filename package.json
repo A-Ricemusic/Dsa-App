@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "@convex-dev/aggregate": "0.3.1",
+    "@convex-dev/workos": "^0.0.3",
     "@workos-inc/authkit-react": "^0.16.2",
-    "@workos-inc/node": "^10.13.0",
     "convex": "^1.45.0",
     "lucide-react": "^1.40.0",
     "react": "^19.2.8",
@@ -35,7 +35,6 @@
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@vercel/node": "^12.0.1",
     "@vitejs/plugin-react": "^6.1.1",
     "convex-test": "^0.0.56",
     "jsdom": "^30.0.1",

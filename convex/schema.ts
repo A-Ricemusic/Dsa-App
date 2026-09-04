@@ -21,6 +21,12 @@ export default defineSchema({
     categoryStatsReadyAt: v.optional(v.number()),
   }).index("by_ownerId", ["ownerId"]),
 
+  defaultCategories: defineTable({
+    name: v.string(),
+    normalizedName: v.string(),
+    sortOrder: v.number(),
+  }).index("by_sortOrder", ["sortOrder"]),
+
   problems: defineTable({
     ownerId: v.string(),
     name: v.string(),
