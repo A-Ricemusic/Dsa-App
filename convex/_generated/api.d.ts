@@ -10,7 +10,6 @@
 
 import type * as attempts from "../attempts.js";
 import type * as categories from "../categories.js";
-import type * as defaultCategories from "../defaultCategories.js";
 import type * as lib_attempts from "../lib/attempts.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_categories from "../lib/categories.js";
@@ -26,7 +25,6 @@ import type {
 declare const fullApi: ApiFromModules<{
   attempts: typeof attempts;
   categories: typeof categories;
-  defaultCategories: typeof defaultCategories;
   "lib/attempts": typeof lib_attempts;
   "lib/auth": typeof lib_auth;
   "lib/categories": typeof lib_categories;

@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it, vi } from "vitest";
-import { api, internal } from "./_generated/api";
+import { api } from "./_generated/api";
 import schema from "./schema";
 import { modules } from "./test.setup";
 
@@ -26,32 +26,6 @@ describe("categories", () => {
     await expect(t.mutation(api.categories.remove, { categoryId })).rejects.toThrow("signed in");
   });
 
-  it("seeds the database-backed default catalog idempotently", async () => {
-    const { t } = createTestContext();
-
-    await expect(t.mutation(internal.defaultCategories.seed)).resolves.toBe(71);
-    await expect(t.mutation(internal.defaultCategories.seed)).resolves.toBe(0);
-
-    const defaults = await t.run(async (ctx) => {
-      return await ctx.db
-        .query("defaultCategories")
-        .withIndex("by_sortOrder")
-        .order("asc")
-        .take(250);
-    });
-    expect(defaults).toHaveLength(71);
-    expect(defaults[0]).toMatchObject({
-      name: "Arrays",
-      normalizedName: "arrays",
-      sortOrder: 0,
-    });
-    expect(defaults.at(-1)).toMatchObject({
-      name: "Database",
-      normalizedName: "database",
-      sortOrder: 70,
-    });
-  });
-
   it("copies defaults from the catalog once per owner without replacing custom categories", async () => {
     const { t, alice, bob } = createTestContext();
 
@@ -61,17 +35,28 @@ describe("categories", () => {
     });
     expect(profilesBeforeSeed).toEqual([]);
 
-    await t.mutation(internal.defaultCategories.seed);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("defaultCategories", {
+        name: "Arrays",
+        normalizedName: "arrays",
+        sortOrder: 0,
+      });
+      await ctx.db.insert("defaultCategories", {
+        name: "Trees",
+        normalizedName: "trees",
+        sortOrder: 1,
+      });
+    });
     const customArraysId = await alice.mutation(api.categories.create, { name: "Arrays" });
 
-    await expect(alice.mutation(api.categories.ensureDefaults)).resolves.toBe(70);
+    await expect(alice.mutation(api.categories.ensureDefaults)).resolves.toBe(1);
     await expect(alice.mutation(api.categories.ensureDefaults)).resolves.toBe(0);
-    await expect(bob.mutation(api.categories.ensureDefaults)).resolves.toBe(71);
+    await expect(bob.mutation(api.categories.ensureDefaults)).resolves.toBe(2);
 
     const aliceCategories = await alice.query(api.categories.list);
     const bobCategories = await bob.query(api.categories.list);
-    expect(aliceCategories).toHaveLength(71);
-    expect(bobCategories).toHaveLength(71);
+    expect(aliceCategories).toHaveLength(2);
+    expect(bobCategories).toHaveLength(2);
     expect(aliceCategories.find((category) => category._id === customArraysId)).toMatchObject({
       name: "Arrays",
       normalizedName: "arrays",
