@@ -17,6 +17,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@convex-dev/aggregate": "0.3.1",
     "@workos-inc/authkit-react": "^0.16.2",
     "@workos-inc/node": "^10.13.0",
     "convex": "^1.45.0",

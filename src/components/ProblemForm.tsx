@@ -1,15 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { Check, Plus, Search, Tag } from "lucide-react";
 import { api } from "../../convex/_generated/api";
-import type {
-  Category,
-  CategoryId,
-  Difficulty,
-  Grade,
-  ProblemId,
-  ProblemWithCategories,
-} from "../lib/types";
+import type { CategoryId, Difficulty, Grade, ProblemId, ProblemWithCategories } from "../lib/types";
 import { dateInputValue, getErrorMessage, inputDateTimestamp } from "../lib/utils";
 import { Modal, Toggle } from "./Primitives";
 
@@ -18,17 +11,22 @@ export function ProblemForm({
   onClose,
   onCreated,
   problem,
-  categories,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated?: (problemId: ProblemId) => void;
   problem?: ProblemWithCategories;
-  categories: Category[];
 }) {
   const createProblem = useMutation(api.problems.create);
   const updateProblem = useMutation(api.problems.update);
   const createCategory = useMutation(api.categories.create);
+  const {
+    results: categories,
+    status: categoryStatus,
+    loadMore: loadMoreCategories,
+  } = usePaginatedQuery(api.categories.listPaginated, open ? {} : "skip", {
+    initialNumItems: 100,
+  });
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
@@ -56,6 +54,10 @@ export function ProblemForm({
     setCategorySearch("");
     setError("");
   }, [open, problem]);
+
+  useEffect(() => {
+    if (open && categoryStatus === "CanLoadMore") loadMoreCategories(100);
+  }, [categoryStatus, loadMoreCategories, open]);
 
   const visibleCategories = useMemo(() => {
     const needle = categorySearch.trim().toLocaleLowerCase();
@@ -203,6 +205,9 @@ export function ProblemForm({
             />
           </div>
           <div className="mt-3 max-h-48 overflow-y-auto rounded-2xl border border-line p-2">
+            {categoryStatus === "LoadingMore" && (
+              <p className="mb-2 px-2 text-xs text-muted">Loading the rest of your categories…</p>
+            )}
             {categorySearch.trim() && !exactMatch && (
               <button
                 type="button"

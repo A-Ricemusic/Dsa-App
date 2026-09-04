@@ -9,37 +9,43 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import { useQuery } from "convex/react";
 import type { ReactNode } from "react";
+import { api } from "../../convex/_generated/api";
 import type { Grade, ProblemWithCategories } from "../lib/types";
-import { averageGrade, formatShortDate, sortProblems } from "../lib/utils";
-import { DifficultyBadge, EmptyState, GradeBadge } from "./Primitives";
+import { averageGradeFromCounts, formatShortDate } from "../lib/utils";
+import { DifficultyBadge, EmptyState, GradeBadge, Spinner } from "./Primitives";
 
 export function Dashboard({
-  problems,
   firstName,
   onAddProblem,
   onOpenProblem,
   onSeeAll,
 }: {
-  problems: ProblemWithCategories[];
   firstName: string;
   onAddProblem: () => void;
   onOpenProblem: (problem: ProblemWithCategories) => void;
   onSeeAll: () => void;
 }) {
-  const reviewQueue = sortProblems(
-    problems.filter((problem) => problem.latestShouldReview),
-    "recent",
-  );
-  const recent = sortProblems(problems, "recent").slice(0, 5);
-  const attempts = problems.reduce((sum, problem) => sum + problem.attemptCount, 0);
-  const strong = problems.filter(
-    (problem) => problem.latestGrade === "A" || problem.latestGrade === "B",
-  ).length;
-  const avgGrade = averageGrade(problems);
+  const data = useQuery(api.problems.dashboard);
+  const stats = useQuery(api.stats.get);
+
+  if (data === undefined || stats === undefined) {
+    return (
+      <div className="grid min-h-[80vh] place-items-center">
+        <Spinner label="Opening your dashboard" />
+      </div>
+    );
+  }
+
+  const recent = data.recent;
+  const nextReview = data.nextReview;
+  const gradeCounts = stats.gradeCounts ?? { A: 0, B: 0, C: 0, D: 0, F: 0 };
+  const avgGrade = stats.ready ? averageGradeFromCounts(gradeCounts) : "—";
+  const strong = stats.ready ? gradeCounts.A + gradeCounts.B : null;
   const counts = (["A", "B", "C", "D", "F"] as Grade[]).map((grade) => ({
     grade,
-    count: problems.filter((problem) => problem.latestGrade === grade).length,
+    count: gradeCounts[grade],
   }));
   const maxCount = Math.max(1, ...counts.map((item) => item.count));
 
@@ -59,8 +65,8 @@ export function Dashboard({
             <button className="button-light" onClick={onAddProblem}>
               <Plus size={17} /> Add a problem
             </button>
-            {reviewQueue.length > 0 && (
-              <button className="button-dark-ghost" onClick={() => onOpenProblem(reviewQueue[0]!)}>
+            {nextReview && (
+              <button className="button-dark-ghost" onClick={() => onOpenProblem(nextReview)}>
                 Start review queue <ArrowRight size={16} />
               </button>
             )}
@@ -72,14 +78,14 @@ export function Dashboard({
       <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Problems tracked"
-          value={String(problems.length)}
+          value={stats.problemCount === null ? "—" : String(stats.problemCount)}
           detail="Your working library"
           icon={<BrainCircuit size={19} />}
           tone="green"
         />
         <StatCard
           label="Total attempts"
-          value={String(attempts)}
+          value={stats.attemptCount === null ? "—" : String(stats.attemptCount)}
           detail="Every rep counts"
           icon={<Flame size={19} />}
           tone="orange"
@@ -93,14 +99,18 @@ export function Dashboard({
         />
         <StatCard
           label="Feeling solid"
-          value={String(strong)}
-          detail={`${reviewQueue.length} still in review`}
+          value={strong === null ? "—" : String(strong)}
+          detail={
+            stats.reviewCount === null
+              ? "Calculating review queue"
+              : `${stats.reviewCount} still in review`
+          }
           icon={<BookOpenCheck size={19} />}
           tone="purple"
         />
       </section>
 
-      {problems.length === 0 ? (
+      {recent.length === 0 ? (
         <div className="mt-6">
           <EmptyState
             title="Your practice log starts here"
@@ -166,7 +176,9 @@ export function Dashboard({
                   <p className="eyebrow">Grade pulse</p>
                   <h2 className="mt-1 font-display text-2xl text-ink">Latest attempts</h2>
                 </div>
-                <span className="text-xs text-muted">{problems.length} problems</span>
+                <span className="text-xs text-muted">
+                  {stats.problemCount === null ? "Calculating…" : `${stats.problemCount} problems`}
+                </span>
               </div>
               <div className="mt-7 flex h-36 items-end justify-between gap-3">
                 {counts.map(({ grade, count }) => (
@@ -188,22 +200,22 @@ export function Dashboard({
             <div className="rounded-[1.75rem] bg-review p-6 text-white shadow-soft">
               <div className="flex items-center justify-between">
                 <div className="grid size-10 place-items-center rounded-xl bg-white/12">
-                  {reviewQueue.length ? <RefreshCcw size={18} /> : <CheckCircle2 size={18} />}
+                  {nextReview ? <RefreshCcw size={18} /> : <CheckCircle2 size={18} />}
                 </div>
-                <span className="text-3xl font-display">{reviewQueue.length}</span>
+                <span className="text-3xl font-display">{stats.reviewCount ?? "—"}</span>
               </div>
               <h3 className="mt-5 font-display text-xl">
-                {reviewQueue.length ? "Ready for another pass" : "Review queue is clear"}
+                {nextReview ? "Ready for another pass" : "Review queue is clear"}
               </h3>
               <p className="mt-2 text-sm leading-6 text-white/65">
-                {reviewQueue.length
+                {nextReview
                   ? "Based on the review toggle from each problem’s newest attempt."
                   : "Nothing is marked for review on its latest attempt."}
               </p>
-              {reviewQueue.length > 0 && (
+              {nextReview && (
                 <button
                   className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-lime"
-                  onClick={() => onOpenProblem(reviewQueue[0]!)}
+                  onClick={() => onOpenProblem(nextReview)}
                 >
                   Open next problem <ArrowRight size={15} />
                 </button>

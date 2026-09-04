@@ -1,7 +1,9 @@
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { requireOwnerId } from "./lib/auth";
+import { categoryStats } from "./lib/aggregates";
 import schema from "./schema";
 
 const DEFAULT_CATEGORIES = [
@@ -84,6 +86,10 @@ function normalizeName(name: string) {
 
 const CLEANUP_BATCH_SIZE = 100;
 
+const categoryWithCountValidator = schema.doc("categories").extend({
+  problemCount: v.union(v.number(), v.null()),
+});
+
 export const cleanupDeletedCategory = internalMutation({
   args: { categoryId: v.id("categories") },
   returns: v.null(),
@@ -95,6 +101,7 @@ export const cleanupDeletedCategory = internalMutation({
 
     for (const assignment of assignments) {
       await ctx.db.delete(assignment._id);
+      await categoryStats.deleteIfExists(ctx, assignment);
     }
 
     if (assignments.length === CLEANUP_BATCH_SIZE) {
@@ -114,6 +121,35 @@ export const list = query({
       .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
       .take(250);
     return categories.sort((a, b) => a.name.localeCompare(b.name));
+  },
+});
+
+export const listPaginated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(categoryWithCountValidator),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
+      .unique();
+    const result = await ctx.db
+      .query("categories")
+      .withIndex("by_ownerId_and_normalizedName", (q) => q.eq("ownerId", ownerId))
+      .paginate(args.paginationOpts);
+    const counts =
+      profile?.categoryStatsReadyAt && result.page.length > 0
+        ? await categoryStats.countBatch(
+            ctx,
+            result.page.map((category) => ({ namespace: category._id })),
+          )
+        : result.page.map(() => null);
+    return {
+      ...result,
+      page: result.page.map((category, index) =>
+        Object.assign({}, category, { problemCount: counts[index] ?? null }),
+      ),
+    };
   },
 });
 

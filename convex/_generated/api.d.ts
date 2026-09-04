@@ -10,10 +10,12 @@
 
 import type * as attempts from "../attempts.js";
 import type * as categories from "../categories.js";
+import type * as lib_aggregates from "../lib/aggregates.js";
 import type * as lib_attempts from "../lib/attempts.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as problems from "../problems.js";
+import type * as stats from "../stats.js";
 
 import type {
   ApiFromModules,
@@ -24,10 +26,12 @@ import type {
 declare const fullApi: ApiFromModules<{
   attempts: typeof attempts;
   categories: typeof categories;
+  "lib/aggregates": typeof lib_aggregates;
   "lib/attempts": typeof lib_attempts;
   "lib/auth": typeof lib_auth;
   "lib/validators": typeof lib_validators;
   problems: typeof problems;
+  stats: typeof stats;
 }>;
 
 /**
@@ -56,4 +60,7 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  problemStats: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"problemStats">;
+  categoryStats: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"categoryStats">;
+};
