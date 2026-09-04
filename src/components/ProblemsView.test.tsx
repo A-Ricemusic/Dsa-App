@@ -51,13 +51,20 @@ const problems = [
   }),
 ];
 
-function renderProblems() {
+function renderProblems({
+  problemResults = problems,
+  problemStatus = "Exhausted",
+}: {
+  problemResults?: ProblemWithCategories[];
+  problemStatus?: "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
+} = {}) {
+  const loadMoreProblems = vi.fn<(numItems: number) => void>();
   usePaginatedQueryMock.mockReset().mockImplementation((query) => {
     const isProblemQuery = getFunctionName(query) === "problems:listPaginated";
     return {
-      results: isProblemQuery ? problems : [arrays, binaryTree],
-      status: "Exhausted",
-      loadMore: vi.fn<(numItems: number) => void>(),
+      results: isProblemQuery ? problemResults : [arrays, binaryTree],
+      status: isProblemQuery ? problemStatus : "Exhausted",
+      loadMore: isProblemQuery ? loadMoreProblems : vi.fn<(numItems: number) => void>(),
     };
   });
   useQueryMock.mockReset().mockReturnValue({
@@ -73,6 +80,7 @@ function renderProblems() {
       onOpenProblem={vi.fn<(problem: ProblemWithCategories) => void>()}
     />,
   );
+  return { loadMoreProblems };
 }
 
 describe("ProblemsView filters", () => {
@@ -122,5 +130,22 @@ describe("ProblemsView filters", () => {
 
     expect(screen.getAllByText("Tree Recovery")).toHaveLength(2);
     expect(screen.queryByText("Array Search")).not.toBeInTheDocument();
+  });
+
+  it("does not claim there are no matches while later pages are still loading", async () => {
+    const user = userEvent.setup();
+    const { loadMoreProblems } = renderProblems({
+      problemResults: [problems[0]!],
+      problemStatus: "CanLoadMore",
+    });
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Search problems or categories" }),
+      "array",
+    );
+
+    expect(screen.getByText("Searching all problems")).toBeInTheDocument();
+    expect(screen.queryByText("No matches found")).not.toBeInTheDocument();
+    expect(loadMoreProblems).toHaveBeenCalledWith(50);
   });
 });

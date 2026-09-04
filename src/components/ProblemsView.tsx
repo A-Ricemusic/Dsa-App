@@ -126,6 +126,7 @@ export function ProblemsView({
   const hasFilters =
     search || difficulty !== "all" || grade !== "all" || categoryId !== "all" || review !== "all";
   const needsCompleteDataset = Boolean(hasFilters) || sort !== "recent";
+  const isLoadingCompleteDataset = needsCompleteDataset && problemStatus !== "Exhausted";
 
   useEffect(() => {
     if (categoryStatus === "CanLoadMore") loadMoreCategories(100);
@@ -252,9 +253,14 @@ export function ProblemsView({
       </section>
 
       <div className="mt-5">
-        {problemStatus === "LoadingFirstPage" ? (
+        {problemStatus === "LoadingFirstPage" ||
+        (isLoadingCompleteDataset && filtered.length === 0) ? (
           <div className="panel grid min-h-64 place-items-center">
-            <Spinner label="Loading problems" />
+            <Spinner
+              label={
+                problemStatus === "LoadingFirstPage" ? "Loading problems" : "Searching all problems"
+              }
+            />
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState

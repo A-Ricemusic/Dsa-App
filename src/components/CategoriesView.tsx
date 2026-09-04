@@ -4,7 +4,7 @@ import { Layers3, Plus, Search, Sparkles, Tag, Trash2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Category } from "../lib/types";
 import { getErrorMessage } from "../lib/utils";
-import { EmptyState } from "./Primitives";
+import { EmptyState, Spinner } from "./Primitives";
 
 type CategoryWithCount = Category & { problemCount: number | null };
 
@@ -31,6 +31,8 @@ export function CategoriesView() {
   useEffect(() => {
     if (search.trim() && status === "CanLoadMore") loadMore(100);
   }, [loadMore, search, status]);
+
+  const isSearchingAll = Boolean(search.trim()) && status !== "Exhausted";
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
@@ -140,7 +142,15 @@ export function CategoriesView() {
             </label>
           </div>
 
-          {visible.length === 0 ? (
+          {status === "LoadingFirstPage" || (isSearchingAll && visible.length === 0) ? (
+            <div className="mt-5 grid min-h-64 place-items-center rounded-[1.75rem] border border-line bg-surface shadow-card">
+              <Spinner
+                label={
+                  status === "LoadingFirstPage" ? "Loading categories" : "Searching all categories"
+                }
+              />
+            </div>
+          ) : visible.length === 0 ? (
             <div className="mt-5">
               <EmptyState
                 title="No categories found"
