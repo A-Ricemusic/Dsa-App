@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@workos-inc/authkit-react";
 import { useMutation, useConvexAuth, useQuery } from "convex/react";
 import {
   ArrowRight,
@@ -10,7 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import { useAuth } from "./auth/AuthProvider";
+import { currentReturnPath } from "./auth/session";
 import type { AttemptId, ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
@@ -28,17 +29,8 @@ export default function App() {
   const isCallback = window.location.pathname === "/callback";
 
   const beginSignIn = () => {
-    const { pathname, search, hash } = window.location;
-    const returnTo =
-      pathname === "/login" || pathname === "/callback" ? "/" : `${pathname}${search}${hash}`;
-    return signIn(returnTo);
+    return signIn({ state: { returnTo: currentReturnPath() } });
   };
-
-  useEffect(() => {
-    if (window.location.pathname === "/login" && !isLoading && !user) {
-      void signIn("/");
-    }
-  }, [isLoading, signIn, user]);
 
   if (isLoading || (user && isConvexLoading)) return <FullPageLoading />;
 
@@ -54,7 +46,7 @@ export default function App() {
     <Tracker
       firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
       email={user.email}
-      onSignOut={() => void signOut()}
+      onSignOut={() => void signOut({ returnTo: window.location.origin })}
     />
   );
 }
