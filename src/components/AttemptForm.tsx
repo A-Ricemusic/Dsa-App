@@ -66,7 +66,7 @@ export function AttemptForm({
       eyebrow={attempt ? "Update your reflection" : "Another repetition"}
       title={attempt ? "Edit attempt" : "Log an attempt"}
     >
-      <form onSubmit={handleSubmit} className="space-y-6 px-6 py-7 sm:px-8">
+      <form onSubmit={handleSubmit} className="space-y-5 px-5 py-5 sm:px-6">
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="field">
             <span>Date attempted</span>
@@ -86,6 +86,7 @@ export function AttemptForm({
                   type="button"
                   key={value}
                   onClick={() => setGrade(value)}
+                  aria-pressed={grade === value}
                   className={`grade-choice ${grade === value ? "grade-choice-active" : ""}`}
                 >
                   {value}
@@ -99,7 +100,7 @@ export function AttemptForm({
           checked={shouldReviewAgain}
           onChange={setShouldReviewAgain}
           label="Review this again"
-          description="Only the newest attempt controls whether the problem enters your review queue."
+          description="Your latest attempt sets the problem’s review status."
         />
 
         <label className="field">
@@ -114,9 +115,13 @@ export function AttemptForm({
           <small>{notes.length}/4,000</small>
         </label>
 
-        {error && <p className="form-error">{error}</p>}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
 
-        <div className="flex flex-col-reverse gap-3 border-t border-line pt-6 sm:flex-row sm:justify-end">
+        <div className="sticky bottom-0 -mx-5 -mb-5 flex flex-col-reverse gap-3 border-t border-line bg-surface px-5 py-4 sm:-mx-6 sm:flex-row sm:justify-end sm:px-6">
           <button type="button" className="button-secondary" onClick={onClose}>
             Cancel
           </button>

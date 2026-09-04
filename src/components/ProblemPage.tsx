@@ -52,7 +52,7 @@ export function ProblemPage({
         <ArrowLeft size={15} /> Back to problems
       </button>
 
-      <header className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <header className="detail-heading">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <DifficultyBadge difficulty={problem.difficulty} />
@@ -62,10 +62,8 @@ export function ProblemPage({
               </span>
             ))}
           </div>
-          <p className="eyebrow mt-6">Problem journal</p>
-          <h1 className="mt-2 max-w-4xl font-display text-4xl leading-tight text-ink sm:text-5xl">
-            {problem.name}
-          </h1>
+
+          <h1 className="max-w-4xl">{problem.name}</h1>
           <a
             className="mt-4 inline-flex max-w-full items-center gap-2 truncate text-sm font-semibold text-accent hover:text-accent-ink"
             href={problem.url}
@@ -77,14 +75,18 @@ export function ProblemPage({
           </a>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="detail-actions">
           <button className="button-primary" onClick={() => setAttemptFormOpen(true)}>
             <Plus size={16} /> Log attempt
           </button>
           <button className="button-secondary" onClick={onEdit}>
             <Pencil size={15} /> Edit problem
           </button>
-          <button className="button-danger" onClick={() => void handleDelete()} disabled={deleting}>
+          <button
+            className="button-ghost text-danger"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+          >
             <Trash2 size={15} /> {deleting ? "Deleting…" : "Delete"}
           </button>
         </div>
@@ -92,36 +94,36 @@ export function ProblemPage({
 
       {error && <p className="form-error mt-6">{error}</p>}
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-3">
-        <article className="panel flex items-center gap-4 p-5">
-          <GradeBadge grade={problem.latestGrade} large />
+      <dl className="detail-stats">
+        <div>
+          <dt>Latest grade</dt>
+          <dd>
+            <GradeBadge grade={problem.latestGrade} />
+          </dd>
+        </div>
+        <div>
+          <dt>Total attempts</dt>
+          <dd>{problem.attemptCount}</dd>
+        </div>
+        <div>
+          <dt>Last practiced</dt>
+          <dd>{formatDate(problem.latestAttemptAt)}</dd>
+        </div>
+        {problem.latestShouldReview && (
           <div>
-            <p className="text-xs font-semibold text-muted">Latest grade</p>
-            <p className="mt-1 text-sm font-bold text-ink">
-              {problem.latestGrade ? `Grade ${problem.latestGrade}` : "Not attempted"}
-            </p>
+            <dt>Next step</dt>
+            <dd className="flex items-center gap-2 text-review-light">
+              <RefreshCcw size={14} />
+              Review again
+            </dd>
           </div>
-        </article>
-        <article className="panel p-5">
-          <p className="text-xs font-semibold text-muted">Total attempts</p>
-          <p className="mt-2 font-display text-3xl text-ink">{problem.attemptCount}</p>
-        </article>
-        <article className="panel p-5">
-          <p className="text-xs font-semibold text-muted">Last practiced</p>
-          <p className="mt-2 text-sm font-bold text-ink">{formatDate(problem.latestAttemptAt)}</p>
-          {problem.latestShouldReview && (
-            <span className="review-pill mt-2">
-              <RefreshCcw size={11} /> Review again
-            </span>
-          )}
-        </article>
-      </section>
+        )}
+      </dl>
 
       <section className="mt-6">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="eyebrow">Attempt history</p>
-            <h2 className="mt-1 font-display text-3xl text-ink">Your repetitions</h2>
+            <h2 className="text-base">Attempt history</h2>
           </div>
           <span className="rounded-full bg-mist px-3 py-1 text-xs font-semibold text-muted">
             {attempts?.length ?? 0} logged
@@ -143,28 +145,28 @@ export function ProblemPage({
             }
           />
         ) : (
-          <div className="grid gap-3">
+          <div className="border-t border-line">
             {attempts.map((attempt, index) => {
               const notes = attempt.notes;
               return (
                 <button
                   key={attempt._id}
                   onClick={() => onOpenAttempt(attempt)}
-                  className="group panel grid gap-4 p-5 text-left transition hover:-translate-y-0.5 hover:border-stone hover:shadow-soft sm:grid-cols-[auto_11rem_minmax(0,1fr)_auto] sm:items-center"
+                  className="group attempt-row"
                 >
-                  <GradeBadge grade={attempt.grade} large />
+                  <GradeBadge grade={attempt.grade} />
                   <div>
                     <p className="text-sm font-bold text-ink">Attempt {attempts.length - index}</p>
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
                       <CalendarDays size={13} /> {formatDate(attempt.attemptedAt)}
                     </p>
                   </div>
-                  <div className="min-w-0">
+                  <div className="attempt-preview order-last min-w-0 md:order-none">
                     <p className="line-clamp-2 text-sm leading-6 text-muted">
                       {notes || "No notes were added for this attempt."}
                     </p>
                   </div>
-                  <div className="flex items-center justify-between gap-4 sm:justify-end">
+                  <div className="flex items-center justify-end gap-3">
                     {attempt.shouldReviewAgain ? (
                       <span className="review-pill">
                         <RefreshCcw size={11} /> Review again

@@ -73,10 +73,10 @@ export function AttemptPage({
         <ArrowLeft size={15} /> Back to {problem.name}
       </button>
 
-      <header className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <header className="detail-heading">
         <div>
           <p className="eyebrow">Attempt {attemptNumber}</p>
-          <h1 className="mt-2 font-display text-4xl text-ink sm:text-5xl">{problem.name}</h1>
+          <h1 className="mt-2">{problem.name}</h1>
           <p className="mt-4 flex items-center gap-2 text-sm text-muted">
             <CalendarDays size={15} /> {formatDate(attempt.attemptedAt)}
           </p>
@@ -85,7 +85,11 @@ export function AttemptPage({
           <button className="button-primary" onClick={() => setEditing(true)}>
             <Pencil size={15} /> Edit attempt
           </button>
-          <button className="button-danger" onClick={() => void handleDelete()} disabled={deleting}>
+          <button
+            className="button-ghost text-danger"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+          >
             <Trash2 size={15} /> {deleting ? "Deleting…" : "Delete"}
           </button>
         </div>
@@ -93,64 +97,51 @@ export function AttemptPage({
 
       {error && <p className="form-error mt-6">{error}</p>}
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_22rem]">
-        <article className="panel p-6 sm:p-8 lg:p-10">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-7">
-            <div className="flex items-center gap-4">
-              <GradeBadge grade={attempt.grade} large />
-              <div>
-                <p className="text-xs font-semibold text-muted">Performance</p>
-                <p className="mt-1 text-lg font-bold text-ink">Grade {attempt.grade}</p>
-              </div>
-            </div>
+      <dl className="detail-stats">
+        <div>
+          <dt>Grade</dt>
+          <dd>
+            <GradeBadge grade={attempt.grade} />
+          </dd>
+        </div>
+        <div>
+          <dt>Review status</dt>
+          <dd>
             {attempt.shouldReviewAgain ? (
-              <span className="review-pill">
-                <RefreshCcw size={12} /> Review again
+              <span className="flex items-center gap-2 text-review-light">
+                <RefreshCcw size={14} />
+                Review again
               </span>
             ) : (
-              <span className="mastered-pill">Feeling solid</span>
+              "No review needed"
             )}
-          </div>
-
-          <div className="pt-8">
-            <p className="eyebrow">Notes to future me</p>
-            <div className="mt-4 min-h-52 whitespace-pre-wrap text-base leading-8 text-ink/80">
-              {notes || "No notes were added for this attempt."}
-            </div>
-          </div>
+          </dd>
+        </div>
+        <div>
+          <dt>Attempt</dt>
+          <dd>
+            {attemptNumber} of {attempts.length}
+          </dd>
+        </div>
+      </dl>
+      <div className="notes-layout">
+        <article>
+          <h2 className="mb-4 text-base">Attempt notes</h2>
+          <div className="notes-content">{notes || "No notes were added for this attempt."}</div>
         </article>
-
-        <aside className="space-y-4">
-          <section className="panel p-6">
-            <p className="eyebrow">Problem details</p>
-            <h2 className="mt-2 font-display text-2xl text-ink">{problem.name}</h2>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <DifficultyBadge difficulty={problem.difficulty} />
-              {problem.categories.map((category) => (
-                <span className="tag" key={category._id}>
-                  {category.name}
-                </span>
-              ))}
-            </div>
-            <a
-              className="button-secondary mt-6 w-full"
-              href={problem.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open problem <ExternalLink size={15} />
-            </a>
-          </section>
-
-          <section className="rounded-[1.75rem] bg-review p-6 text-white shadow-soft">
-            <p className="text-xs font-semibold text-white/60">Practice context</p>
-            <p className="mt-3 font-display text-3xl">
-              {attemptNumber} of {attempts.length}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-white/65">
-              Every attempt keeps its own grade, review decision, and reflection.
-            </p>
-          </section>
+        <aside className="notes-aside">
+          <h2 className="mb-4 text-sm">Problem details</h2>
+          <DifficultyBadge difficulty={problem.difficulty} />
+          <div className="mt-3 flex flex-wrap gap-2">
+            {problem.categories.map((category) => (
+              <span className="tag" key={category._id}>
+                {category.name}
+              </span>
+            ))}
+          </div>
+          <a className="text-button mt-5" href={problem.url} target="_blank" rel="noreferrer">
+            Open problem <ExternalLink size={14} />
+          </a>
         </aside>
       </div>
 

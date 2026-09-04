@@ -137,7 +137,7 @@ export function ProblemForm({
       title={problem ? "Update problem" : "Add a problem"}
       width="max-w-3xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-7 px-6 py-7 sm:px-8">
+      <form onSubmit={handleSubmit} className="space-y-5 px-5 py-5 sm:px-6">
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="field sm:col-span-2">
             <span>Problem name</span>
@@ -163,13 +163,14 @@ export function ProblemForm({
 
         <fieldset>
           <legend className="field-label">Difficulty</legend>
-          <div className="mt-2 grid grid-cols-3 gap-2 rounded-2xl bg-mist p-1.5">
+          <div className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-mist p-1.5">
             {(["easy", "medium", "hard"] as const).map((value) => (
               <button
                 type="button"
                 key={value}
                 onClick={() => setDifficulty(value)}
-                className={`rounded-xl px-3 py-2.5 text-sm font-semibold capitalize transition ${
+                aria-pressed={difficulty === value}
+                className={`rounded-md px-3 py-2.5 text-sm font-semibold capitalize transition ${
                   difficulty === value
                     ? "bg-surface text-ink shadow-sm"
                     : "text-muted hover:text-ink"
@@ -199,15 +200,16 @@ export function ProblemForm({
               value={categorySearch}
               onChange={(event) => setCategorySearch(event.target.value)}
               placeholder="Search or create a category"
+              aria-label="Search or create a category"
               maxLength={48}
             />
           </div>
-          <div className="mt-3 max-h-48 overflow-y-auto rounded-2xl border border-line p-2">
+          <div className="mt-3 max-h-32 overflow-y-auto rounded-md border border-line p-2">
             {categorySearch.trim() && !exactMatch && (
               <button
                 type="button"
                 onClick={() => void handleCreateCategory()}
-                className="mb-1 flex w-full items-center gap-2 rounded-xl bg-accent-soft px-3 py-2.5 text-left text-sm font-semibold text-accent-ink"
+                className="mb-1 flex w-full items-center gap-2 rounded-md bg-accent-soft px-3 py-2.5 text-left text-sm font-semibold text-accent-ink"
               >
                 <Plus size={15} /> Create “{categorySearch.trim()}”
               </button>
@@ -220,9 +222,10 @@ export function ProblemForm({
                     type="button"
                     key={category._id}
                     onClick={() => toggleCategory(category._id)}
+                    aria-pressed={active}
                     className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                       active
-                        ? "border-accent bg-accent text-white"
+                        ? "border-accent bg-accent text-on-accent"
                         : "border-line bg-surface text-muted hover:border-stone hover:text-ink"
                     }`}
                   >
@@ -236,7 +239,7 @@ export function ProblemForm({
         </div>
 
         {!problem && (
-          <section className="rounded-[1.5rem] border border-line bg-canvas/55 p-5 sm:p-6">
+          <section className="border-t border-line pt-4">
             <Toggle
               checked={includeAttempt}
               onChange={setIncludeAttempt}
@@ -245,7 +248,7 @@ export function ProblemForm({
             />
 
             {includeAttempt && (
-              <div className="mt-6 space-y-5 border-t border-line pt-6">
+              <div className="mt-4 space-y-5">
                 <div className="grid gap-5 sm:grid-cols-2">
                   <label className="field">
                     <span>Date attempted</span>
@@ -265,6 +268,7 @@ export function ProblemForm({
                           type="button"
                           key={value}
                           onClick={() => setGrade(value)}
+                          aria-pressed={grade === value}
                           className={`grade-choice ${grade === value ? "grade-choice-active" : ""}`}
                         >
                           {value}
@@ -278,7 +282,7 @@ export function ProblemForm({
                   checked={shouldReviewAgain}
                   onChange={setShouldReviewAgain}
                   label="Review this again"
-                  description="The newest attempt controls whether this problem enters your review queue."
+                  description="Add this problem to your review queue."
                 />
 
                 <label className="field">
@@ -297,9 +301,13 @@ export function ProblemForm({
           </section>
         )}
 
-        {error && <p className="form-error">{error}</p>}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
 
-        <div className="flex flex-col-reverse gap-3 border-t border-line pt-6 sm:flex-row sm:justify-end">
+        <div className="sticky bottom-0 -mx-5 -mb-5 flex flex-col-reverse gap-3 border-t border-line bg-surface px-5 py-4 sm:-mx-6 sm:flex-row sm:justify-end sm:px-6">
           <button type="button" className="button-secondary" onClick={onClose}>
             Cancel
           </button>

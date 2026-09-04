@@ -63,7 +63,7 @@ describe("ProblemsView filters", () => {
     );
     await user.click(screen.getByRole("option", { name: /Review again/ }));
 
-    expect(screen.getAllByText("Tree Recovery")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Tree Recovery" })).toBeInTheDocument();
     expect(screen.queryByText("Array Search")).not.toBeInTheDocument();
     expect(screen.queryByText("New Problem")).not.toBeInTheDocument();
     expect(screen.getByText("Latest attempt: review again")).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("ProblemsView filters", () => {
     );
     await user.click(screen.getByRole("option", { name: /No review needed/ }));
 
-    expect(screen.getAllByText("Array Search")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Array Search" })).toBeInTheDocument();
     expect(screen.queryByText("Tree Recovery")).not.toBeInTheDocument();
     expect(screen.queryByText("New Problem")).not.toBeInTheDocument();
   });
@@ -96,7 +96,61 @@ describe("ProblemsView filters", () => {
     );
     await user.click(screen.getByRole("option", { name: "Binary Tree" }));
 
-    expect(screen.getAllByText("Tree Recovery")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Tree Recovery" })).toBeInTheDocument();
     expect(screen.queryByText("Array Search")).not.toBeInTheDocument();
+  });
+});
+
+describe("ProblemsView navigation and search", () => {
+  it("opens the review queue directly without including unattempted problems", () => {
+    render(
+      <ProblemsView
+        problems={problems}
+        categories={[arrays, binaryTree]}
+        initialReviewOnly
+        onAddProblem={vi.fn<() => void>()}
+        onOpenProblem={vi.fn<(problem: ProblemWithCategories) => void>()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Tree Recovery" })).toBeInTheDocument();
+    expect(screen.queryByText("Array Search")).not.toBeInTheDocument();
+    expect(screen.queryByText("New Problem")).not.toBeInTheDocument();
+  });
+
+  it("opens the selected problem from the shared table", async () => {
+    const user = userEvent.setup();
+    const onOpenProblem = vi.fn<(problem: ProblemWithCategories) => void>();
+    render(
+      <ProblemsView
+        problems={problems}
+        categories={[arrays, binaryTree]}
+        onAddProblem={vi.fn<() => void>()}
+        onOpenProblem={onOpenProblem}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Array Search" }));
+    expect(onOpenProblem).toHaveBeenCalledWith(problems[1]);
+  });
+
+  it("combines search with review status and restores the library when cleared", async () => {
+    const user = userEvent.setup();
+    render(
+      <ProblemsView
+        problems={problems}
+        categories={[arrays, binaryTree]}
+        initialReviewOnly
+        onAddProblem={vi.fn<() => void>()}
+        onOpenProblem={vi.fn<(problem: ProblemWithCategories) => void>()}
+      />,
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Search problems or categories" }),
+      "array",
+    );
+    expect(screen.getByText("No matches found")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reset filters" }));
+    expect(screen.getByRole("button", { name: "Tree Recovery" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Array Search" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New Problem" })).toBeInTheDocument();
   });
 });
