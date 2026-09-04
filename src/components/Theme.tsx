@@ -38,15 +38,13 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const initialTheme = preferredTheme();
-    applyTheme(initialTheme);
-    return initialTheme;
-  });
+  const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    const initialTheme = preferredTheme();
+    setTheme(initialTheme);
+    applyTheme(initialTheme);
+  }, []);
 
   const toggleTheme = useCallback(() => {
     setTheme((current) => {
@@ -56,6 +54,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       } catch {
         // The in-memory preference still applies for the current session.
       }
+      applyTheme(next);
       return next;
     });
   }, []);

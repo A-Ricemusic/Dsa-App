@@ -1,6 +1,6 @@
 # Recall
 
-A private data structures and algorithms practice journal built with React, Vite, Tailwind CSS, Convex, and WorkOS AuthKit.
+A private data structures and algorithms practice journal built with React, Next.js, Tailwind CSS, Convex, and WorkOS AuthKit.
 
 ## Local setup
 
@@ -18,12 +18,15 @@ CONVEX_URL=https://your-deployment.convex.cloud
 CONVEX_SITE_URL=https://your-deployment.convex.site
 WORKOS_CLIENT_ID=client_your_client_id
 WORKOS_REDIRECT_URI=http://localhost:5173/callback
+WORKOS_API_KEY=sk_test_your_api_key
+WORKOS_COOKIE_PASSWORD=replace_with_at_least_32_random_characters
 ```
 
 In the WorkOS dashboard, configure the application with:
 
 - Redirect URI: `http://localhost:5173/callback`
-- Allowed CORS origin: `http://localhost:5173`
+- Sign-in URL: `http://localhost:5173/sign-in`
+- Logout redirect: `http://localhost:5173`
 
 Add the same WorkOS client ID to the existing Convex development deployment:
 
@@ -40,31 +43,32 @@ bun run dev
 
 ## Vercel
 
-`vercel.json` configures Bun installation, the Vite build, and SPA routing. Add these environment variables to the Vercel project:
+`vercel.json` configures Bun installation, the Next.js build, and the existing Convex deployment step. Add these environment variables to the Vercel project:
 
 - `WORKOS_CLIENT_ID`
 - `WORKOS_REDIRECT_URI` (for example, `https://your-domain.com/callback`)
+- `WORKOS_API_KEY`
+- `WORKOS_COOKIE_PASSWORD`
 
 The Vercel build supplies `CONVEX_URL` through the existing Convex deploy
-command. No WorkOS API key or application-owned cookie password is required.
+command. Keep `WORKOS_COOKIE_PASSWORD` unchanged across deployments; changing it
+invalidates existing application sessions.
 
-Add the production callback and production origin to WorkOS. Set
-`WORKOS_CLIENT_ID` on the production Convex deployment before deploying its
-functions. A `/callback` server function is not needed: Vercel serves the SPA and
-AuthKit React completes the callback in the browser.
+In WorkOS, add the production callback (`https://your-domain.com/callback`),
+sign-in URL (`https://your-domain.com/sign-in`), and logout redirect
+(`https://your-domain.com`). Set only `WORKOS_CLIENT_ID` on the corresponding
+Convex deployment. `WORKOS_API_KEY` and `WORKOS_COOKIE_PASSWORD` belong in the
+application server environment on Vercel, not in Convex.
 
-Production authentication uses AuthKit React's cookie mode. The SDK keeps the
-access token in memory and refreshes it through the WorkOS-managed session cookie;
-the app does not need a WorkOS API key or its own cookie password. Development
-uses the SDK's documented `devMode` only while Vite is running in development.
-The first production load also removes refresh tokens left by the old forced
-`devMode` configuration.
+Authentication uses WorkOS's official Next.js server integration. It stores the
+refresh token inside an encrypted `HttpOnly`, `Secure`, `SameSite=Lax` cookie on
+the application origin. Browser JavaScript receives only a short-lived access
+token when Convex needs one. The first load also removes refresh tokens left by
+the old browser `devMode` implementation.
 
-AuthKit restores a valid cookie-backed production session when the application
-loads. Refreshing the page or deploying a new JavaScript bundle does not itself
-invalidate that session. WorkOS supports a custom Authentication API domain,
-but this application does not require an additional hostname environment
-variable for session restoration.
+AuthKit reads and refreshes the application-owned session in Next.js proxy
+middleware. Refreshing a nested route or deploying a new build does not itself
+invalidate that session, and no custom WorkOS domain is required.
 
 WorkOS session maximum lifetime and inactivity timeout are controlled in the
 WorkOS dashboard. Set those values to the desired product policy; the app refreshes
@@ -74,7 +78,7 @@ provider-enforced maximum lifetime.
 ## Commands
 
 ```bash
-bun run dev        # Vite frontend
+bun run dev        # Next.js frontend and auth server on port 5173
 bun run dev:convex # Convex development sync
 bun run typecheck  # Strict TypeScript check
 bun run build      # Production build

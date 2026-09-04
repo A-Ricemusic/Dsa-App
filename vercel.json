@@ -1,8 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
+  "framework": "nextjs",
   "installCommand": "bun install --frozen-lockfile",
-  "buildCommand": "bunx convex deploy --cmd \"bun run build\" --cmd-url-env-var-name CONVEX_URL",
-  "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "buildCommand": "bunx convex deploy --cmd \"bun run build\" --cmd-url-env-var-name CONVEX_URL"
 }

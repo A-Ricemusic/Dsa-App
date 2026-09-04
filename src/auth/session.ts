@@ -1,34 +1,15 @@
 const LEGACY_REFRESH_TOKEN_KEY = "workos:refresh-token";
 
-export function currentReturnPath() {
-  const { pathname, search, hash } = window.location;
-  if (pathname === "/callback") return "/";
-  return `${pathname}${search}${hash}`;
-}
-
-export function safeReturnPath(value: unknown) {
-  if (typeof value !== "string") return "/";
-
+export function clearLegacyDevSessions() {
   try {
-    const destination = new URL(value, window.location.origin);
-    if (destination.origin !== window.location.origin) return "/";
-    return `${destination.pathname}${destination.search}${destination.hash}`;
+    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.localStorage.key(index);
+      if (key === LEGACY_REFRESH_TOKEN_KEY || key?.startsWith(`${LEGACY_REFRESH_TOKEN_KEY}:`)) {
+        window.localStorage.removeItem(key);
+      }
+    }
   } catch {
-    return "/";
-  }
-}
-
-export function restoreReturnPath(value: unknown) {
-  window.history.replaceState({}, "", safeReturnPath(value));
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
-export function clearLegacyDevSession(clientId: string) {
-  try {
-    window.localStorage.removeItem(`${LEGACY_REFRESH_TOKEN_KEY}:${clientId}`);
-    window.localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
-  } catch {
-    // Storage may be unavailable under restrictive browser policies. AuthKit's
-    // production cookie session remains independent of these legacy values.
+    // Storage may be unavailable under restrictive browser policies. The
+    // server-managed session is independent of these obsolete browser values.
   }
 }

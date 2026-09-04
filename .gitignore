@@ -3,6 +3,7 @@ node_modules/
 
 # Builds and generated reports
 dist/
+.next/
 out/
 coverage/
 *.lcov

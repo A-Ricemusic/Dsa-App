@@ -1,6 +1,9 @@
+"use client";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "@workos-inc/authkit-react";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useMutation, useConvexAuth, useQuery } from "convex/react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowRight,
   BrainCircuit,
@@ -11,7 +14,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import { currentReturnPath } from "./auth/session";
 import type { AttemptId, ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
@@ -24,19 +26,10 @@ import { Spinner } from "./components/Primitives";
 import { ThemeToggle } from "./components/Theme";
 
 export default function App() {
-  const { isLoading, user, signIn, signOut } = useAuth();
+  const { loading: isLoading, user, signOut } = useAuth();
   const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } = useConvexAuth();
-  const isCallback = window.location.pathname === "/callback";
-
-  const beginSignIn = () => {
-    return signIn({ state: { returnTo: currentReturnPath() } });
-  };
 
   if (isLoading || (user && isConvexLoading)) return <FullPageLoading />;
-
-  if (isCallback && !user) {
-    return <AuthCallbackError onRetry={() => void beginSignIn()} />;
-  }
 
   if (!user) return <Landing onSignIn={() => void beginSignIn()} />;
 
@@ -49,6 +42,12 @@ export default function App() {
       onSignOut={() => void signOut({ returnTo: window.location.origin })}
     />
   );
+}
+
+function beginSignIn() {
+  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const query = new URLSearchParams({ returnTo: currentPath });
+  window.location.assign(`/sign-in?${query.toString()}`);
 }
 
 function Tracker({
@@ -246,22 +245,18 @@ function routeFromPath(pathname: string): AppRoute {
 }
 
 function useAppRoute() {
-  const [route, setRoute] = useState(() => routeFromPath(window.location.pathname));
+  const pathname = usePathname();
+  const router = useRouter();
+  const route = useMemo(() => routeFromPath(pathname), [pathname]);
 
-  useEffect(() => {
-    const handlePopState = () => setRoute(routeFromPath(window.location.pathname));
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  const navigate = useCallback((path: string, options?: { replace?: boolean }) => {
-    if (window.location.pathname !== path) {
-      if (options?.replace) window.history.replaceState({}, "", path);
-      else window.history.pushState({}, "", path);
-    }
-    setRoute(routeFromPath(path));
-    window.scrollTo({ top: 0 });
-  }, []);
+  const navigate = useCallback(
+    (path: string, options?: { replace?: boolean }) => {
+      if (options?.replace) router.replace(path);
+      else router.push(path);
+      window.scrollTo({ top: 0 });
+    },
+    [router],
+  );
 
   return { route, navigate };
 }
@@ -415,32 +410,6 @@ function AuthConnectionError() {
         <button className="button-primary mt-7" onClick={() => window.location.reload()}>
           Retry connection <RefreshCcw size={15} />
         </button>
-      </section>
-    </main>
-  );
-}
-
-function AuthCallbackError({ onRetry }: { onRetry: () => void }) {
-  return (
-    <main className="grid min-h-screen place-items-center bg-canvas px-6">
-      <section className="w-full max-w-md rounded-[2rem] border border-line bg-surface p-8 text-center shadow-soft sm:p-10">
-        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-danger/10 text-danger">
-          <LockKeyhole size={20} />
-        </div>
-        <p className="eyebrow mt-6">Authentication interrupted</p>
-        <h1 className="mt-2 font-display text-3xl text-ink">Sign-in couldn’t finish.</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">
-          The authentication response could not be completed. Try again; if it repeats, verify the
-          callback URL and allowed origin in WorkOS.
-        </p>
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button className="button-primary" onClick={onRetry}>
-            Try signing in again <ArrowRight size={15} />
-          </button>
-          <a className="button-secondary" href="/">
-            Back to home
-          </a>
-        </div>
       </section>
     </main>
   );
