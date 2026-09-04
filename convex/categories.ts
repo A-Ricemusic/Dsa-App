@@ -2,85 +2,8 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { requireOwnerId } from "./lib/auth";
+import { normalizeCategoryName } from "./lib/categories";
 import schema from "./schema";
-
-const DEFAULT_CATEGORIES = [
-  "Arrays",
-  "Strings",
-  "Hash Table",
-  "Math",
-  "Dynamic Programming",
-  "Sorting",
-  "Greedy",
-  "Depth-First Search",
-  "Binary Search",
-  "Trees",
-  "Breadth-First Search",
-  "Matrix",
-  "Two Pointers",
-  "Bit Manipulation",
-  "Binary Tree",
-  "Prefix Sum",
-  "Stack",
-  "Heap / Priority Queue",
-  "Simulation",
-  "Counting",
-  "Graph Theory",
-  "Design",
-  "Sliding Window",
-  "Backtracking",
-  "Union Find",
-  "Enumeration",
-  "Linked List",
-  "Ordered Set",
-  "Monotonic Stack",
-  "Trie",
-  "Number Theory",
-  "Divide and Conquer",
-  "Recursion",
-  "Bitmask",
-  "Queue",
-  "Binary Search Tree",
-  "Segment Tree",
-  "Memoization",
-  "Geometry",
-  "Combinatorics",
-  "Topological Sort",
-  "Hash Function",
-  "Binary Indexed Tree",
-  "Game Theory",
-  "String Matching",
-  "Shortest Path",
-  "Interactive",
-  "Rolling Hash",
-  "Data Stream",
-  "Brainteaser",
-  "Monotonic Queue",
-  "Randomized",
-  "Merge Sort",
-  "Doubly-Linked List",
-  "Counting Sort",
-  "Iterator",
-  "Probability and Statistics",
-  "Quickselect",
-  "Suffix Array",
-  "Bucket Sort",
-  "Line Sweep",
-  "Minimum Spanning Tree",
-  "Reservoir Sampling",
-  "Strongly Connected Component",
-  "Eulerian Circuit",
-  "Radix Sort",
-  "Rejection Sampling",
-  "Biconnected Component",
-  "Deque",
-  "Search",
-  "Database",
-] as const;
-
-function normalizeName(name: string) {
-  return name.trim().replace(/\s+/g, " ").toLowerCase();
-}
 
 const CLEANUP_BATCH_SIZE = 100;
 
@@ -129,21 +52,27 @@ export const ensureDefaults = mutation({
 
     if (profile?.defaultCategoriesSeededAt) return 0;
 
+    const defaults = await ctx.db
+      .query("defaultCategories")
+      .withIndex("by_sortOrder")
+      .order("asc")
+      .take(250);
+    if (defaults.length === 0) return 0;
+
     const now = Date.now();
     let inserted = 0;
-    for (const name of DEFAULT_CATEGORIES) {
-      const normalizedName = normalizeName(name);
+    for (const defaultCategory of defaults) {
       const existing = await ctx.db
         .query("categories")
         .withIndex("by_ownerId_and_normalizedName", (q) =>
-          q.eq("ownerId", ownerId).eq("normalizedName", normalizedName),
+          q.eq("ownerId", ownerId).eq("normalizedName", defaultCategory.normalizedName),
         )
         .unique();
       if (!existing) {
         await ctx.db.insert("categories", {
           ownerId,
-          name,
-          normalizedName,
+          name: defaultCategory.name,
+          normalizedName: defaultCategory.normalizedName,
           isDefault: true,
           createdAt: now,
         });
@@ -172,7 +101,7 @@ export const create = mutation({
     if (name.length < 2 || name.length > 48) {
       throw new ConvexError("Category names must be between 2 and 48 characters.");
     }
-    const normalizedName = normalizeName(name);
+    const normalizedName = normalizeCategoryName(name);
     const existing = await ctx.db
       .query("categories")
       .withIndex("by_ownerId_and_normalizedName", (q) =>
