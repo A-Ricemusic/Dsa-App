@@ -5,6 +5,10 @@ export default defineConfig({
     projects: [
       {
         extends: true,
+        test: { name: "server", include: ["server/**/*.test.ts"], environment: "node" },
+      },
+      {
+        extends: true,
         test: {
           name: "convex",
           include: ["convex/**/*.test.ts"],

@@ -1,9 +1,0 @@
-import { getSignInUrl } from "@workos-inc/authkit-nextjs";
-import type { NextRequest } from "next/server";
-import { redirect } from "next/navigation";
-import { safeReturnPath } from "../../src/auth/return-path";
-
-export async function GET(request: NextRequest) {
-  const returnTo = safeReturnPath(request.nextUrl.searchParams.get("returnTo"));
-  redirect(await getSignInUrl({ returnTo }));
-}

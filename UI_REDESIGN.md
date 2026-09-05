@@ -22,14 +22,15 @@ The redesign uses a compact top navigation, shared tables, restrained color, and
 - Branch: `redesign/minimal-ui`
 - Worktree: `../dsa-tracker-minimal-ui`
 - Baseline commit: `33f504c` snapshots the existing uncommitted framework migration so the redesign builds on the current application.
-- Development preview: run `bun run dev --port 5174` in this worktree.
+- Main integration: `44c3cdf` brings the Vite runtime, server-managed WorkOS session cookies, route validation, and normalized category-name index into the redesign.
+- Development preview: run `bun run dev` in this worktree (port 5173, matching the configured WorkOS callback).
 
 ## Verification
 
 - `bun run typecheck`
 - `bun run lint`
 - `bun run format`
-- `bun run test`: 37 tests, including direct review filtering, shared-table navigation, and combined search/reset behavior.
+- `bun run test`: 68 tests, including server authentication, session restoration and retry, route validation, review-queue navigation, shared-table navigation, and combined search/reset behavior.
 - `bun run build`: successful production build.
 - Browser checks cover populated and empty states, desktop/tablet/mobile layouts, light/dark themes, filter interaction, form submission with local fixtures, editing, keyboard dismissal, backdrop dismissal, and focus restoration.
 - Local sample data and browser artifacts live in the ignored `.cache/ui-review/` directory. Sample records are isolated from the application's database.

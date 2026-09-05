@@ -1,12 +1,10 @@
-"use client";
-
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "@workos-inc/authkit-nextjs/components";
+import { useAuth } from "./auth/AuthProvider";
 import { useMutation, useConvexAuth, useQuery } from "convex/react";
-import { usePathname, useRouter } from "next/navigation";
+import { routeFromPath } from "./lib/routes";
 import { ArrowRight, BrainCircuit, RefreshCcw } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import type { AttemptId, ProblemId, ProblemWithCategories, View } from "./lib/types";
+import type { ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
 import { Dashboard } from "./components/Dashboard";
@@ -18,45 +16,72 @@ import { Spinner } from "./components/Primitives";
 import { ThemeToggle } from "./components/Theme";
 
 export default function App() {
-  const { loading: isLoading, user, signOut } = useAuth();
+  const { loading: isLoading, user, signOut, error, retry } = useAuth();
+  const routing = useAppRoute();
   const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } = useConvexAuth();
+
+  if (routing.route.kind === "not-found")
+    return (
+      <MissingPage
+        title="Page not found"
+        description="This address doesn't match a page in Recall."
+        onBack={() => routing.navigate("/problems")}
+      />
+    );
+
+  if (error && !user)
+    return (
+      <MissingPage
+        title="Unable to check your session"
+        description="Your session has not been cleared. Check your connection and retry."
+        onBack={retry}
+        backLabel="Retry"
+      />
+    );
 
   if (isLoading || (user && isConvexLoading)) return <FullPageLoading />;
 
-  if (!user) return <Landing onSignIn={() => void beginSignIn()} />;
+  if (!user) return <Landing />;
 
   if (!isConvexAuthenticated) return <AuthConnectionError />;
 
   return (
-    <Tracker
-      firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
-      email={user.email}
-      onSignOut={() => void signOut({ returnTo: window.location.origin })}
-    />
+    <>
+      {error && (
+        <div role="alert" className="bg-surface p-3 text-center text-sm text-ink">
+          Authentication could not be updated.{" "}
+          <button onClick={retry} className="underline">
+            Retry
+          </button>
+        </div>
+      )}
+      <Tracker
+        firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
+        email={user.email}
+        onSignOut={() => void signOut()}
+        routing={routing}
+      />
+    </>
   );
-}
-
-function beginSignIn() {
-  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  const query = new URLSearchParams({ returnTo: currentPath });
-  window.location.assign(`/sign-in?${query.toString()}`);
 }
 
 function Tracker({
   firstName,
   email,
   onSignOut,
+  routing,
 }: {
   firstName: string;
   email: string;
   onSignOut: () => void;
+  routing: ReturnType<typeof useAppRoute>;
 }) {
   const rawProblems = useQuery(api.problems.list);
   const categories = useQuery(api.categories.list);
   const assignments = useQuery(api.problems.listCategoryAssignments);
   const ensureDefaults = useMutation(api.categories.ensureDefaults);
   const removeProblem = useMutation(api.problems.remove);
-  const { route, navigate } = useAppRoute();
+  const { route, navigate } = routing;
   const [reviewOnly, setReviewOnly] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<ProblemId>();
@@ -113,6 +138,7 @@ function Tracker({
   };
 
   const renderRoute = () => {
+    if (route.kind === "not-found") return null;
     if (loading) {
       return (
         <div className="grid min-h-[80vh] place-items-center">
@@ -213,44 +239,21 @@ function Tracker({
   );
 }
 
-type AppRoute =
-  | { kind: "dashboard" }
-  | { kind: "problems" }
-  | { kind: "categories" }
-  | { kind: "problem"; problemId: ProblemId }
-  | { kind: "attempt"; problemId: ProblemId; attemptId: AttemptId };
-
-function routeFromPath(pathname: string): AppRoute {
-  const parts = pathname.split("/").filter(Boolean);
-  if (parts.length === 0) return { kind: "dashboard" };
-  if (parts.length === 1 && parts[0] === "problems") return { kind: "problems" };
-  if (parts.length === 1 && parts[0] === "categories") return { kind: "categories" };
-  if (parts.length === 2 && parts[0] === "problems") {
-    return { kind: "problem", problemId: parts[1] as ProblemId };
-  }
-  if (parts.length === 4 && parts[0] === "problems" && parts[2] === "attempts") {
-    return {
-      kind: "attempt",
-      problemId: parts[1] as ProblemId,
-      attemptId: parts[3] as AttemptId,
-    };
-  }
-  return { kind: "dashboard" };
-}
-
 function useAppRoute() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const [pathname, setPathname] = useState(window.location.pathname);
+  useEffect(() => {
+    const onPopState = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
   const route = useMemo(() => routeFromPath(pathname), [pathname]);
 
-  const navigate = useCallback(
-    (path: string, options?: { replace?: boolean }) => {
-      if (options?.replace) router.replace(path);
-      else router.push(path);
-      window.scrollTo({ top: 0 });
-    },
-    [router],
-  );
+  const navigate = useCallback((path: string, options?: { replace?: boolean }) => {
+    if (options?.replace) window.history.replaceState(null, "", path);
+    else window.history.pushState(null, "", path);
+    setPathname(window.location.pathname);
+    window.scrollTo({ top: 0 });
+  }, []);
 
   return { route, navigate };
 }
@@ -259,10 +262,12 @@ function MissingPage({
   title,
   description,
   onBack,
+  backLabel = "Back to problems",
 }: {
   title: string;
   description: string;
   onBack: () => void;
+  backLabel?: string;
 }) {
   return (
     <div className="page-wrap">
@@ -271,14 +276,14 @@ function MissingPage({
         <h1 className="mt-2 font-display text-3xl text-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
         <button className="button-primary mt-7" onClick={onBack}>
-          Back to problems
+          {backLabel}
         </button>
       </section>
     </div>
   );
 }
 
-export function Landing({ onSignIn }: { onSignIn: () => void }) {
+function Landing() {
   return (
     <main className="min-h-screen bg-canvas text-ink">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 sm:px-10">
@@ -288,9 +293,9 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
           </span>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <button className="text-button" onClick={onSignIn}>
+            <a className="text-button" href="/sign-in">
               Sign in <ArrowRight size={15} />
-            </button>
+            </a>
           </div>
         </header>
         <div className="grid flex-1 content-center items-center gap-12 py-16 lg:grid-cols-2 lg:gap-20">
@@ -305,9 +310,9 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
               Keep your problems, attempts, and insights together. Know what you’ve learned and what
               to practice next.
             </p>
-            <button className="button-primary mt-7" onClick={onSignIn}>
+            <a className="button-primary mt-7" href="/sign-in">
               Start your journal <ArrowRight size={16} />
-            </button>
+            </a>
             <p className="mt-4 text-xs text-muted">
               Your notes. Your pace. A little better each time.
             </p>
