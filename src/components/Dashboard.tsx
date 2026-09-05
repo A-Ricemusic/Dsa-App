@@ -52,7 +52,7 @@ export function Dashboard({
           <dd>{attempts}</dd>
         </div>
         <div>
-          <dt>Average grade</dt>
+          <dt>Average latest grade</dt>
           <dd>{averageGrade(problems) ?? "—"}</dd>
         </div>
         <div>
@@ -138,12 +138,12 @@ export function Dashboard({
           </div>
           <section className="mt-9">
             <div className="section-heading">
-              <h2>Recent practice</h2>
+              <h2>Recent problems</h2>
               <button className="text-button" onClick={() => onSeeAll()}>
                 View all problems <ArrowRight size={14} />
               </button>
             </div>
-            <ProblemList problems={recent} onOpenProblem={onOpenProblem} label="Recent practice" />
+            <ProblemList problems={recent} onOpenProblem={onOpenProblem} label="Recent problems" />
           </section>
         </>
       )}

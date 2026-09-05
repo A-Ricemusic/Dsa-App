@@ -62,3 +62,30 @@ describe("SearchableSelect", () => {
     expect(onChange).toHaveBeenCalledExactlyOnceWith("C");
   });
 });
+
+it("keeps keyboard-highlighted options visible and dismisses on focus leaving the filter", async () => {
+  const user = userEvent.setup();
+  const scroll = vi.fn<() => void>();
+  render(
+    <>
+      <SearchableSelect
+        label="Latest grade"
+        searchPlaceholder="Search grades"
+        value="all"
+        options={options}
+        onChange={() => {}}
+      />
+      <button>Next control</button>
+    </>,
+  );
+  await user.click(screen.getByRole("button", { name: "All grades" }));
+  const last = screen.getByRole("option", { name: "Grade C" });
+  last.scrollIntoView = scroll;
+  await user.click(screen.getByRole("combobox"));
+  await user.keyboard("{End}");
+  expect(scroll).toHaveBeenCalledWith({ block: "nearest" });
+  expect(screen.getByRole("combobox")).toHaveAttribute("aria-activedescendant", last.id);
+  await user.tab();
+  expect(screen.getByRole("button", { name: "Next control" })).toHaveFocus();
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+});

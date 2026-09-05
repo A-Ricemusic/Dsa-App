@@ -1,5 +1,6 @@
+import { useCompleteQuery } from "../lib/useCompleteQuery";
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { ArrowLeft, CalendarDays, ExternalLink, Pencil, RefreshCcw, Trash2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { AttemptId, ProblemWithCategories } from "../lib/types";
@@ -18,7 +19,7 @@ export function AttemptPage({
   onBack: () => void;
   onDeleted: () => void;
 }) {
-  const attempts = useQuery(api.attempts.listForProblem, { problemId: problem._id });
+  const attempts = useCompleteQuery(api.attempts.listForProblemPage, { problemId: problem._id });
   const removeAttempt = useMutation(api.attempts.remove);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -95,7 +96,11 @@ export function AttemptPage({
         </div>
       </header>
 
-      {error && <p className="form-error mt-6">{error}</p>}
+      {error && (
+        <p role="alert" className="form-error mt-6">
+          {error}
+        </p>
+      )}
 
       <dl className="detail-stats">
         <div>

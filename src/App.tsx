@@ -1,6 +1,7 @@
+import { useCompleteQuery } from "./lib/useCompleteQuery";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./auth/AuthProvider";
-import { useMutation, useConvexAuth, useQuery } from "convex/react";
+import { useMutation, useConvexAuth } from "convex/react";
 import { routeFromPath } from "./lib/routes";
 import { ArrowRight, BrainCircuit, RefreshCcw } from "lucide-react";
 import { api } from "../convex/_generated/api";
@@ -76,9 +77,14 @@ function Tracker({
   onSignOut: () => void;
   routing: ReturnType<typeof useAppRoute>;
 }) {
-  const rawProblems = useQuery(api.problems.list);
-  const categories = useQuery(api.categories.list);
-  const assignments = useQuery(api.problems.listCategoryAssignments);
+  const rawProblems = useCompleteQuery(api.problems.listPage, {});
+  const rawCategories = useCompleteQuery(api.categories.listPage, {});
+  const categories = useMemo(
+    () =>
+      rawCategories ? [...rawCategories].sort((a, b) => a.name.localeCompare(b.name)) : undefined,
+    [rawCategories],
+  );
+  const assignments = useCompleteQuery(api.problems.listCategoryAssignmentsPage, {});
   const ensureDefaults = useMutation(api.categories.ensureDefaults);
   const removeProblem = useMutation(api.problems.remove);
   const { route, navigate } = routing;
@@ -86,9 +92,18 @@ function Tracker({
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<ProblemId>();
 
-  useEffect(() => {
-    void ensureDefaults();
+  const [defaultsError, setDefaultsError] = useState(false);
+  const seedDefaults = useCallback(async () => {
+    setDefaultsError(false);
+    try {
+      await ensureDefaults();
+    } catch {
+      setDefaultsError(true);
+    }
   }, [ensureDefaults]);
+  useEffect(() => {
+    void seedDefaults();
+  }, [seedDefaults]);
 
   const problems = useMemo<ProblemWithCategories[]>(() => {
     if (!rawProblems || !categories || !assignments) return [];
@@ -223,6 +238,14 @@ function Tracker({
       userName={firstName}
       userEmail={email}
     >
+      {defaultsError && (
+        <p role="alert" className="border-b border-line py-3 text-sm text-muted">
+          Default categories couldn’t be loaded.{" "}
+          <button className="underline" onClick={() => void seedDefaults()}>
+            Retry
+          </button>
+        </p>
+      )}
       {renderRoute()}
 
       <ProblemForm

@@ -25,8 +25,11 @@ vi.mock("./auth/AuthProvider", () => ({ useAuth: mocks.auth }));
 vi.mock("convex/react", () => ({
   useConvexAuth: () => ({ isLoading: false, isAuthenticated: true }),
   useMutation: () => mocks.mutation,
-  useQuery: (reference: Parameters<typeof getFunctionName>[0]) =>
-    getFunctionName(reference) === "problems:list" ? problems : [],
+  usePaginatedQuery: (reference: Parameters<typeof getFunctionName>[0]) => ({
+    results: getFunctionName(reference) === "problems:listPage" ? problems : [],
+    status: "Exhausted",
+    loadMore: vi.fn<(count: number) => void>(),
+  }),
 }));
 
 function authState(
@@ -53,6 +56,7 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/");
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   mocks.auth.mockReturnValue(authState());
+  mocks.mutation.mockReset().mockResolvedValue(null);
 });
 
 describe("merged app routing and authentication", () => {
@@ -127,4 +131,19 @@ describe("merged app routing and authentication", () => {
     expect(window.location.pathname).toBe("/problems");
     expect(screen.getByRole("link", { name: "Sign in" })).toBeInTheDocument();
   });
+});
+
+it("offers retry when default category setup fails without hiding the journal", async () => {
+  const user = userEvent.setup();
+  mocks.auth.mockReturnValue(
+    authState({ user: { id: "test", email: "test@example.com", firstName: "Test" } }),
+  );
+  mocks.mutation.mockRejectedValueOnce(new Error("Connection failed")).mockResolvedValue(null);
+  renderApp();
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Default categories couldn’t be loaded.");
+  expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+  await user.click(within(alert).getByRole("button", { name: "Retry" }));
+  expect(mocks.mutation).toHaveBeenCalledTimes(2);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });

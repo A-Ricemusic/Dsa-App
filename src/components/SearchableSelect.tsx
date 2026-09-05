@@ -96,6 +96,15 @@ export function SearchableSelect<Value extends string>({
 
   const activeIndex = Math.min(highlightedIndex, Math.max(0, filteredOptions.length - 1));
 
+  const activeOptionId = filteredOptions[activeIndex]
+    ? `${listboxId}-${filteredOptions[activeIndex].value}`
+    : undefined;
+  useEffect(() => {
+    if (open && activeOptionId) {
+      document.getElementById(activeOptionId)?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [activeOptionId, open]);
+
   const handleListKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -125,7 +134,14 @@ export function SearchableSelect<Value extends string>({
   };
 
   return (
-    <div className="relative min-w-0" ref={rootRef}>
+    <div
+      className="relative min-w-0"
+      ref={rootRef}
+      onBlurCapture={(event) => {
+        if (open && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget))
+          close();
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -200,11 +216,7 @@ export function SearchableSelect<Value extends string>({
                   aria-label={`Search ${label.toLocaleLowerCase()} options`}
                   aria-expanded="true"
                   aria-controls={listboxId}
-                  aria-activedescendant={
-                    filteredOptions[activeIndex]
-                      ? `${listboxId}-${filteredOptions[activeIndex].value}`
-                      : undefined
-                  }
+                  aria-activedescendant={activeOptionId}
                   autoComplete="off"
                 />
                 {query && (
@@ -244,6 +256,7 @@ export function SearchableSelect<Value extends string>({
                       key={option.value}
                       type="button"
                       role="option"
+                      tabIndex={-1}
                       aria-selected={isSelected}
                       className={`flex min-h-12 w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition ${
                         isHighlighted ? "bg-mist" : "hover:bg-mist/70"

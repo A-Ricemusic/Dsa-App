@@ -1,5 +1,6 @@
+import { useCompleteQuery } from "../lib/useCompleteQuery";
 import { useState } from "react";
-import { useQuery } from "convex/react";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -29,7 +30,7 @@ export function ProblemPage({
   onEdit: () => void;
   onDelete: () => Promise<void>;
 }) {
-  const attempts = useQuery(api.attempts.listForProblem, { problemId: problem._id });
+  const attempts = useCompleteQuery(api.attempts.listForProblemPage, { problemId: problem._id });
   const [attemptFormOpen, setAttemptFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +93,11 @@ export function ProblemPage({
         </div>
       </header>
 
-      {error && <p className="form-error mt-6">{error}</p>}
+      {error && (
+        <p role="alert" className="form-error mt-6">
+          {error}
+        </p>
+      )}
 
       <dl className="detail-stats">
         <div>
@@ -126,7 +131,7 @@ export function ProblemPage({
             <h2 className="text-base">Attempt history</h2>
           </div>
           <span className="rounded-full bg-mist px-3 py-1 text-xs font-semibold text-muted">
-            {attempts?.length ?? 0} logged
+            {problem.attemptCount} logged
           </span>
         </div>
 

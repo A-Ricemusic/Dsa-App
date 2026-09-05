@@ -1,3 +1,4 @@
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
@@ -134,5 +135,18 @@ export const remove = mutation({
       categoryId: args.categoryId,
     });
     return null;
+  },
+});
+
+// Paginated counterpart retained alongside the legacy endpoint for existing clients.
+export const listPage = query({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(schema.doc("categories")),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    return await ctx.db
+      .query("categories")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
+      .paginate(args.paginationOpts);
   },
 });

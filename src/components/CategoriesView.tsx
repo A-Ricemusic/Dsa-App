@@ -39,7 +39,7 @@ export function CategoriesView({
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (saving || !name.trim()) return;
     setSaving(true);
     setError("");
     try {
@@ -80,6 +80,7 @@ export function CategoriesView({
         <label className="field flex-1">
           <span>New category</span>
           <input
+            disabled={saving}
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="e.g. Dynamic programming"
