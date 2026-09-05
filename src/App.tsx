@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@workos-inc/authkit-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "./auth/AuthProvider";
 import { useMutation, useConvexAuth, useQuery } from "convex/react";
+import { routeFromPath } from "./lib/routes";
 import {
   ArrowRight,
   BrainCircuit,
@@ -11,7 +12,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import { currentReturnPath } from "./auth/session";
 import type { AttemptId, ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
@@ -24,30 +24,52 @@ import { Spinner } from "./components/Primitives";
 import { ThemeToggle } from "./components/Theme";
 
 export default function App() {
-  const { isLoading, user, signIn, signOut } = useAuth();
+  const { loading: isLoading, user, signOut, error, retry } = useAuth();
+  const routing = useAppRoute();
   const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } = useConvexAuth();
-  const isCallback = window.location.pathname === "/callback";
 
-  const beginSignIn = () => {
-    return signIn({ state: { returnTo: currentReturnPath() } });
-  };
+  if (routing.route.kind === "not-found")
+    return (
+      <MissingPage
+        title="Page not found"
+        description="This address doesn't match a page in Recall."
+        onBack={() => routing.navigate("/problems")}
+      />
+    );
+
+  if (error && !user)
+    return (
+      <MissingPage
+        title="Unable to check your session"
+        description="Your session has not been cleared. Check your connection and retry."
+        onBack={retry}
+        backLabel="Retry"
+      />
+    );
 
   if (isLoading || (user && isConvexLoading)) return <FullPageLoading />;
 
-  if (isCallback && !user) {
-    return <AuthCallbackError onRetry={() => void beginSignIn()} />;
-  }
-
-  if (!user) return <Landing onSignIn={() => void beginSignIn()} />;
+  if (!user) return <Landing />;
 
   if (!isConvexAuthenticated) return <AuthConnectionError />;
 
   return (
-    <Tracker
-      firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
-      email={user.email}
-      onSignOut={() => void signOut({ returnTo: window.location.origin })}
-    />
+    <>
+      {error && (
+        <div role="alert" className="bg-surface p-3 text-center text-sm text-ink">
+          Authentication could not be updated.{" "}
+          <button onClick={retry} className="underline">
+            Retry
+          </button>
+        </div>
+      )}
+      <Tracker
+        firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
+        email={user.email}
+        onSignOut={() => void signOut()}
+        routing={routing}
+      />
+    </>
   );
 }
 
@@ -55,14 +77,16 @@ function Tracker({
   firstName,
   email,
   onSignOut,
+  routing,
 }: {
   firstName: string;
   email: string;
   onSignOut: () => void;
+  routing: ReturnType<typeof useAppRoute>;
 }) {
   const ensureDefaults = useMutation(api.categories.ensureDefaults);
   const ensureStatsBackfill = useMutation(api.stats.ensureBackfill);
-  const { route, navigate } = useAppRoute();
+  const { route, navigate } = routing;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingProblem, setEditingProblem] = useState<ProblemWithCategories>();
@@ -95,6 +119,7 @@ function Tracker({
   };
 
   const renderRoute = () => {
+    if (route.kind === "not-found") return null;
     if (route.kind === "dashboard") {
       return (
         <Dashboard
@@ -210,47 +235,19 @@ function ProblemRoute({
     />
   );
 }
-
-type AppRoute =
-  | { kind: "dashboard" }
-  | { kind: "problems" }
-  | { kind: "categories" }
-  | { kind: "problem"; problemId: ProblemId }
-  | { kind: "attempt"; problemId: ProblemId; attemptId: AttemptId };
-
-function routeFromPath(pathname: string): AppRoute {
-  const parts = pathname.split("/").filter(Boolean);
-  if (parts.length === 0) return { kind: "dashboard" };
-  if (parts.length === 1 && parts[0] === "problems") return { kind: "problems" };
-  if (parts.length === 1 && parts[0] === "categories") return { kind: "categories" };
-  if (parts.length === 2 && parts[0] === "problems") {
-    return { kind: "problem", problemId: parts[1] as ProblemId };
-  }
-  if (parts.length === 4 && parts[0] === "problems" && parts[2] === "attempts") {
-    return {
-      kind: "attempt",
-      problemId: parts[1] as ProblemId,
-      attemptId: parts[3] as AttemptId,
-    };
-  }
-  return { kind: "dashboard" };
-}
-
 function useAppRoute() {
-  const [route, setRoute] = useState(() => routeFromPath(window.location.pathname));
-
+  const [pathname, setPathname] = useState(window.location.pathname);
   useEffect(() => {
-    const handlePopState = () => setRoute(routeFromPath(window.location.pathname));
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    const onPopState = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, []);
+  const route = useMemo(() => routeFromPath(pathname), [pathname]);
 
   const navigate = useCallback((path: string, options?: { replace?: boolean }) => {
-    if (window.location.pathname !== path) {
-      if (options?.replace) window.history.replaceState({}, "", path);
-      else window.history.pushState({}, "", path);
-    }
-    setRoute(routeFromPath(path));
+    if (options?.replace) window.history.replaceState(null, "", path);
+    else window.history.pushState(null, "", path);
+    setPathname(window.location.pathname);
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -261,10 +258,12 @@ function MissingPage({
   title,
   description,
   onBack,
+  backLabel = "Back to problems",
 }: {
   title: string;
   description: string;
   onBack: () => void;
+  backLabel?: string;
 }) {
   return (
     <div className="page-wrap">
@@ -273,14 +272,14 @@ function MissingPage({
         <h1 className="mt-2 font-display text-3xl text-ink">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
         <button className="button-primary mt-7" onClick={onBack}>
-          Back to problems
+          {backLabel}
         </button>
       </section>
     </div>
   );
 }
 
-function Landing({ onSignIn }: { onSignIn: () => void }) {
+function Landing() {
   return (
     <main className="relative min-h-screen overflow-x-clip bg-canvas text-ink">
       <div className="hero-grid absolute inset-0 opacity-20" />
@@ -295,9 +294,9 @@ function Landing({ onSignIn }: { onSignIn: () => void }) {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button className="button-secondary" onClick={onSignIn}>
+            <a className="button-secondary" href="/sign-in">
               Sign in <ArrowRight size={15} />
-            </button>
+            </a>
           </div>
         </header>
 
@@ -406,32 +405,6 @@ function AuthConnectionError() {
         <button className="button-primary mt-7" onClick={() => window.location.reload()}>
           Retry connection <RefreshCcw size={15} />
         </button>
-      </section>
-    </main>
-  );
-}
-
-function AuthCallbackError({ onRetry }: { onRetry: () => void }) {
-  return (
-    <main className="grid min-h-screen place-items-center bg-canvas px-6">
-      <section className="w-full max-w-md rounded-[2rem] border border-line bg-surface p-8 text-center shadow-soft sm:p-10">
-        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-danger/10 text-danger">
-          <LockKeyhole size={20} />
-        </div>
-        <p className="eyebrow mt-6">Authentication interrupted</p>
-        <h1 className="mt-2 font-display text-3xl text-ink">Sign-in couldn’t finish.</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">
-          The authentication response could not be completed. Try again; if it repeats, verify the
-          callback URL and allowed origin in WorkOS.
-        </p>
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button className="button-primary" onClick={onRetry}>
-            Try signing in again <ArrowRight size={15} />
-          </button>
-          <a className="button-secondary" href="/">
-            Back to home
-          </a>
-        </div>
       </section>
     </main>
   );

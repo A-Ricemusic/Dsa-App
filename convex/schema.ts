@@ -25,7 +25,9 @@ export default defineSchema({
     name: v.string(),
     normalizedName: v.string(),
     sortOrder: v.number(),
-  }).index("by_sortOrder", ["sortOrder"]),
+  })
+    .index("by_normalizedName", ["normalizedName"])
+    .index("by_sortOrder", ["sortOrder"]),
 
   problems: defineTable({
     ownerId: v.string(),
