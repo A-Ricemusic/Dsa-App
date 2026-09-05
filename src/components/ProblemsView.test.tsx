@@ -1,9 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { getFunctionName, type FunctionReference } from "convex/server";
 import { describe, expect, it, vi } from "vitest";
 import type { ProblemId, ProblemWithCategories } from "../lib/types";
 import { makeCategory, makeProblem } from "../test/factories";
 import { ProblemsView } from "./ProblemsView";
+
+const { usePaginatedQueryMock, useQueryMock } = vi.hoisted(() => ({
+  usePaginatedQueryMock: vi.fn<(query: FunctionReference<"query">) => unknown>(),
+  useQueryMock: vi.fn<() => unknown>(),
+}));
+
+vi.mock("convex/react", () => ({
+  usePaginatedQuery: usePaginatedQueryMock,
+  useQuery: useQueryMock,
+}));
 
 const binaryTree = makeCategory("Binary Tree", "category-tree");
 const arrays = makeCategory("Arrays", "category-arrays");
@@ -40,15 +51,36 @@ const problems = [
   }),
 ];
 
-function renderProblems() {
+function renderProblems({
+  problemResults = problems,
+  problemStatus = "Exhausted",
+}: {
+  problemResults?: ProblemWithCategories[];
+  problemStatus?: "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
+} = {}) {
+  const loadMoreProblems = vi.fn<(numItems: number) => void>();
+  usePaginatedQueryMock.mockReset().mockImplementation((query) => {
+    const isProblemQuery = getFunctionName(query) === "problems:listPaginated";
+    return {
+      results: isProblemQuery ? problemResults : [arrays, binaryTree],
+      status: isProblemQuery ? problemStatus : "Exhausted",
+      loadMore: isProblemQuery ? loadMoreProblems : vi.fn<(numItems: number) => void>(),
+    };
+  });
+  useQueryMock.mockReset().mockReturnValue({
+    ready: true,
+    problemCount: problems.length,
+    attemptCount: 3,
+    reviewCount: 1,
+    gradeCounts: { A: 1, B: 0, C: 1, D: 0, F: 0 },
+  });
   render(
     <ProblemsView
-      problems={problems}
-      categories={[arrays, binaryTree]}
       onAddProblem={vi.fn<() => void>()}
       onOpenProblem={vi.fn<(problem: ProblemWithCategories) => void>()}
     />,
   );
+  return { loadMoreProblems };
 }
 
 describe("ProblemsView filters", () => {
@@ -98,5 +130,22 @@ describe("ProblemsView filters", () => {
 
     expect(screen.getAllByText("Tree Recovery")).toHaveLength(2);
     expect(screen.queryByText("Array Search")).not.toBeInTheDocument();
+  });
+
+  it("does not claim there are no matches while later pages are still loading", async () => {
+    const user = userEvent.setup();
+    const { loadMoreProblems } = renderProblems({
+      problemResults: [problems[0]!],
+      problemStatus: "CanLoadMore",
+    });
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Search problems or categories" }),
+      "array",
+    );
+
+    expect(screen.getByText("Searching all problems")).toBeInTheDocument();
+    expect(screen.queryByText("No matches found")).not.toBeInTheDocument();
+    expect(loadMoreProblems).toHaveBeenCalledWith(50);
   });
 });

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { modules } from "./test.setup";
+import { modules, registerComponents } from "./test.setup";
 
 const baseProblem = {
   name: "Two Sum",
@@ -14,6 +14,7 @@ const baseProblem = {
 
 function createTestContext() {
   const t = convexTest(schema, modules);
+  registerComponents(t);
   return {
     t,
     alice: t.withIdentity({ subject: "alice", issuer: "https://issuer.example" }),
@@ -46,6 +47,167 @@ describe("problems and attempts", () => {
     await expect(bob.query(api.attempts.listForProblem, { problemId })).rejects.toThrow(
       "Problem not found",
     );
+    await expect(alice.query(api.problems.get, { problemId })).resolves.toMatchObject({
+      _id: problemId,
+      categories: [],
+    });
+    await expect(bob.query(api.problems.get, { problemId })).resolves.toBeNull();
+  });
+
+  it("paginates problems and attempts without making deep links depend on a page", async () => {
+    const { alice, bob } = createTestContext();
+    const firstProblemId = await alice.mutation(api.problems.create, {
+      ...baseProblem,
+      name: "First problem",
+    });
+    await alice.mutation(api.problems.create, { ...baseProblem, name: "Second problem" });
+    await alice.mutation(api.problems.create, { ...baseProblem, name: "Third problem" });
+
+    const firstPage = await alice.query(api.problems.listPaginated, {
+      paginationOpts: { cursor: null, numItems: 2 },
+    });
+    const secondPage = await alice.query(api.problems.listPaginated, {
+      paginationOpts: { cursor: firstPage.continueCursor, numItems: 2 },
+    });
+    expect([...firstPage.page, ...secondPage.page]).toHaveLength(3);
+
+    const attemptIds: Id<"attempts">[] = [];
+    for (const [index, grade] of (["C", "B", "A"] as const).entries()) {
+      attemptIds.push(
+        await alice.mutation(api.attempts.create, {
+          problemId: firstProblemId,
+          attemptedAt: Date.UTC(2026, index, 1),
+          grade,
+          shouldReviewAgain: false,
+          notes: `Attempt ${index + 1}`,
+        }),
+      );
+    }
+    const attemptPage = await alice.query(api.attempts.listForProblemPaginated, {
+      problemId: firstProblemId,
+      paginationOpts: { cursor: null, numItems: 2 },
+    });
+    expect(attemptPage.page).toHaveLength(2);
+    await expect(
+      alice.query(api.attempts.get, {
+        problemId: firstProblemId,
+        attemptId: attemptIds[0]!,
+      }),
+    ).resolves.toMatchObject({ notes: "Attempt 1" });
+    await expect(
+      bob.query(api.attempts.get, {
+        problemId: firstProblemId,
+        attemptId: attemptIds[0]!,
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it("keeps an attempt beyond the previous 500-row boundary accessible", async () => {
+    const { t, alice } = createTestContext();
+    const problemId = await alice.mutation(api.problems.create, baseProblem);
+    const oldestAttemptId = await t.run(async (ctx) => {
+      const problem = await ctx.db.get("problems", problemId);
+      if (!problem) throw new Error("Expected problem");
+      let oldest: Id<"attempts"> | null = null;
+      for (let index = 0; index < 501; index += 1) {
+        const attemptId = await ctx.db.insert("attempts", {
+          ownerId: problem.ownerId,
+          problemId,
+          attemptedAt: index,
+          grade: "B",
+          shouldReviewAgain: false,
+          notes: `Attempt ${index}`,
+          createdAt: index,
+          updatedAt: index,
+        });
+        oldest ??= attemptId;
+      }
+      await ctx.db.patch("problems", problemId, { attemptCount: 501 });
+      if (!oldest) throw new Error("Expected oldest attempt");
+      return oldest;
+    });
+
+    const firstPage = await alice.query(api.attempts.listForProblemPaginated, {
+      problemId,
+      paginationOpts: { cursor: null, numItems: 500 },
+    });
+    const secondPage = await alice.query(api.attempts.listForProblemPaginated, {
+      problemId,
+      paginationOpts: { cursor: firstPage.continueCursor, numItems: 500 },
+    });
+    expect([...firstPage.page, ...secondPage.page]).toHaveLength(501);
+    await expect(
+      alice.query(api.attempts.get, { problemId, attemptId: oldestAttemptId }),
+    ).resolves.toMatchObject({ notes: "Attempt 0" });
+  });
+
+  it("paginates beyond the previous problem and category boundaries", async () => {
+    const { t, alice } = createTestContext();
+    const seedProblemId = await alice.mutation(api.problems.create, baseProblem);
+    const ownerId = await t.run(async (ctx) => {
+      const seedProblem = await ctx.db.get("problems", seedProblemId);
+      if (!seedProblem) throw new Error("Expected seed problem");
+      return seedProblem.ownerId;
+    });
+
+    for (let batch = 0; batch < 5; batch += 1) {
+      await t.run(async (ctx) => {
+        for (let offset = 0; offset < 100; offset += 1) {
+          const index = batch * 100 + offset;
+          await ctx.db.insert("problems", {
+            ownerId,
+            name: `Problem ${index}`,
+            url: baseProblem.url,
+            difficulty: baseProblem.difficulty,
+            attemptCount: 0,
+            latestShouldReview: false,
+            createdAt: index,
+            updatedAt: index,
+          });
+        }
+      });
+    }
+    for (let batch = 0; batch < 3; batch += 1) {
+      await t.run(async (ctx) => {
+        const batchSize = batch === 2 ? 51 : 100;
+        for (let offset = 0; offset < batchSize; offset += 1) {
+          const index = batch * 100 + offset;
+          await ctx.db.insert("categories", {
+            ownerId,
+            name: `Category ${index.toString().padStart(3, "0")}`,
+            normalizedName: `category ${index.toString().padStart(3, "0")}`,
+            isDefault: false,
+            createdAt: index,
+          });
+        }
+      });
+    }
+
+    let problemCursor: string | null = null;
+    let problemCount = 0;
+    for (;;) {
+      const result: { page: unknown[]; isDone: boolean; continueCursor: string } =
+        await alice.query(api.problems.listPaginated, {
+          paginationOpts: { cursor: problemCursor, numItems: 200 },
+        });
+      problemCount += result.page.length;
+      if (result.isDone) break;
+      problemCursor = result.continueCursor;
+    }
+    expect(problemCount).toBe(501);
+
+    let categoryCursor: string | null = null;
+    let categoryCount = 0;
+    for (;;) {
+      const result: { page: unknown[]; isDone: boolean; continueCursor: string } =
+        await alice.query(api.categories.listPaginated, {
+          paginationOpts: { cursor: categoryCursor, numItems: 100 },
+        });
+      categoryCount += result.page.length;
+      if (result.isDone) break;
+      categoryCursor = result.continueCursor;
+    }
+    expect(categoryCount).toBe(251);
   });
 
   it("stores notes on attempts and derives the latest attempt summary", async () => {
@@ -147,5 +309,122 @@ describe("problems and attempts", () => {
     });
 
     expect(children).toEqual({ attempts: [], assignments: [] });
+  });
+
+  it("backfills and maintains exact dashboard and category totals", async () => {
+    const { t, alice } = createTestContext();
+    const categoryId = await alice.mutation(api.categories.create, { name: "Study plan" });
+    const reviewProblemId = await alice.mutation(api.problems.create, {
+      ...baseProblem,
+      name: "Review problem",
+      categoryIds: [categoryId],
+      firstAttempt: {
+        attemptedAt: Date.UTC(2026, 0, 1),
+        grade: "C",
+        shouldReviewAgain: true,
+        notes: "Review this",
+      },
+    });
+    const freshProblemId = await alice.mutation(api.problems.create, {
+      ...baseProblem,
+      name: "Fresh problem",
+      categoryIds: [categoryId],
+    });
+    await t.run(async (ctx) => {
+      const category = await ctx.db.get("categories", categoryId);
+      if (!category) throw new Error("Expected category");
+      const now = Date.now();
+      const legacyProblemId = await ctx.db.insert("problems", {
+        ownerId: category.ownerId,
+        name: "Legacy problem",
+        url: baseProblem.url,
+        difficulty: baseProblem.difficulty,
+        attemptCount: 0,
+        latestShouldReview: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("problemCategories", {
+        ownerId: category.ownerId,
+        problemId: legacyProblemId,
+        categoryId,
+        createdAt: now,
+      });
+    });
+
+    await alice.mutation(api.stats.ensureBackfill);
+    vi.useFakeTimers();
+    try {
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await expect(alice.query(api.stats.get)).resolves.toEqual({
+      ready: true,
+      problemCount: 3,
+      attemptCount: 1,
+      reviewCount: 1,
+      gradeCounts: { A: 0, B: 0, C: 1, D: 0, F: 0 },
+    });
+    const categories = await alice.query(api.categories.listPaginated, {
+      paginationOpts: { cursor: null, numItems: 10 },
+    });
+    expect(categories.page).toEqual([
+      expect.objectContaining({ _id: categoryId, problemCount: 3 }),
+    ]);
+
+    const freshAttemptId = await alice.mutation(api.attempts.create, {
+      problemId: freshProblemId,
+      attemptedAt: Date.UTC(2026, 1, 1),
+      grade: "A",
+      shouldReviewAgain: false,
+      notes: "Solid",
+    });
+
+    await alice.mutation(api.attempts.update, {
+      attemptId: freshAttemptId,
+      attemptedAt: Date.UTC(2026, 1, 1),
+      grade: "F",
+      shouldReviewAgain: true,
+      notes: "Needs another pass",
+    });
+    await expect(alice.query(api.stats.get)).resolves.toEqual({
+      ready: true,
+      problemCount: 3,
+      attemptCount: 2,
+      reviewCount: 2,
+      gradeCounts: { A: 0, B: 0, C: 1, D: 0, F: 1 },
+    });
+
+    await alice.mutation(api.attempts.remove, { attemptId: freshAttemptId });
+    await alice.mutation(api.problems.update, {
+      ...baseProblem,
+      problemId: freshProblemId,
+      name: "Fresh problem",
+      categoryIds: [],
+    });
+    const categoriesAfterUnassign = await alice.query(api.categories.listPaginated, {
+      paginationOpts: { cursor: null, numItems: 10 },
+    });
+    expect(categoriesAfterUnassign.page).toEqual([
+      expect.objectContaining({ _id: categoryId, problemCount: 2 }),
+    ]);
+
+    await alice.mutation(api.problems.remove, { problemId: reviewProblemId });
+
+    await expect(alice.query(api.stats.get)).resolves.toEqual({
+      ready: true,
+      problemCount: 2,
+      attemptCount: 0,
+      reviewCount: 0,
+      gradeCounts: { A: 0, B: 0, C: 0, D: 0, F: 0 },
+    });
+    const categoriesAfterDelete = await alice.query(api.categories.listPaginated, {
+      paginationOpts: { cursor: null, numItems: 10 },
+    });
+    expect(categoriesAfterDelete.page).toEqual([
+      expect.objectContaining({ _id: categoryId, problemCount: 1 }),
+    ]);
   });
 });

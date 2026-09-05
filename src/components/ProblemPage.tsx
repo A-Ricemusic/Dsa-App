@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery } from "convex/react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -29,7 +29,15 @@ export function ProblemPage({
   onEdit: () => void;
   onDelete: () => Promise<void>;
 }) {
-  const attempts = useQuery(api.attempts.listForProblem, { problemId: problem._id });
+  const {
+    results: attempts,
+    status: attemptStatus,
+    loadMore: loadMoreAttempts,
+  } = usePaginatedQuery(
+    api.attempts.listForProblemPaginated,
+    { problemId: problem._id },
+    { initialNumItems: 50 },
+  );
   const [attemptFormOpen, setAttemptFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
@@ -124,11 +132,11 @@ export function ProblemPage({
             <h2 className="mt-1 font-display text-3xl text-ink">Your repetitions</h2>
           </div>
           <span className="rounded-full bg-mist px-3 py-1 text-xs font-semibold text-muted">
-            {attempts?.length ?? 0} logged
+            {problem.attemptCount} logged
           </span>
         </div>
 
-        {attempts === undefined ? (
+        {attemptStatus === "LoadingFirstPage" ? (
           <div className="panel grid min-h-64 place-items-center">
             <Spinner label="Loading attempts" />
           </div>
@@ -154,7 +162,9 @@ export function ProblemPage({
                 >
                   <GradeBadge grade={attempt.grade} large />
                   <div>
-                    <p className="text-sm font-bold text-ink">Attempt {attempts.length - index}</p>
+                    <p className="text-sm font-bold text-ink">
+                      Attempt {problem.attemptCount - index}
+                    </p>
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
                       <CalendarDays size={13} /> {formatDate(attempt.attemptedAt)}
                     </p>
@@ -180,6 +190,17 @@ export function ProblemPage({
                 </button>
               );
             })}
+          </div>
+        )}
+        {(attemptStatus === "CanLoadMore" || attemptStatus === "LoadingMore") && (
+          <div className="mt-5 flex justify-center">
+            <button
+              className="button-secondary"
+              onClick={() => loadMoreAttempts(50)}
+              disabled={attemptStatus === "LoadingMore"}
+            >
+              {attemptStatus === "LoadingMore" ? "Loading…" : "Load more attempts"}
+            </button>
           </div>
         )}
       </section>

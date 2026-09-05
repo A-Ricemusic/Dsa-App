@@ -2,10 +2,11 @@ import { convexTest } from "convex-test";
 import { describe, expect, it, vi } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
-import { modules } from "./test.setup";
+import { modules, registerComponents } from "./test.setup";
 
 function createTestContext() {
   const t = convexTest(schema, modules);
+  registerComponents(t);
   return {
     t,
     alice: t.withIdentity({ subject: "alice", issuer: "https://issuer.example" }),

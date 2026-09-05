@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import type { ProblemId, ProblemWithCategories, View } from "./lib/types";
+import type { AttemptId, ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
 import { Dashboard } from "./components/Dashboard";
@@ -84,53 +84,26 @@ function Tracker({
   onSignOut: () => void;
   routing: ReturnType<typeof useAppRoute>;
 }) {
-  const rawProblems = useQuery(api.problems.list);
-  const categories = useQuery(api.categories.list);
-  const assignments = useQuery(api.problems.listCategoryAssignments);
   const ensureDefaults = useMutation(api.categories.ensureDefaults);
-  const removeProblem = useMutation(api.problems.remove);
+  const ensureStatsBackfill = useMutation(api.stats.ensureBackfill);
   const { route, navigate } = routing;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const [editingId, setEditingId] = useState<ProblemId>();
+  const [editingProblem, setEditingProblem] = useState<ProblemWithCategories>();
 
   useEffect(() => {
     void ensureDefaults();
-  }, [ensureDefaults]);
-
-  const problems = useMemo<ProblemWithCategories[]>(() => {
-    if (!rawProblems || !categories || !assignments) return [];
-    const categoryById = new Map(categories.map((category) => [category._id, category]));
-    const idsByProblem = new Map<ProblemId, ProblemWithCategories["categoryIds"]>();
-    for (const assignment of assignments) {
-      const ids = idsByProblem.get(assignment.problemId) ?? [];
-      ids.push(assignment.categoryId);
-      idsByProblem.set(assignment.problemId, ids);
-    }
-    return rawProblems.map((problem) => {
-      const categoryIds = idsByProblem.get(problem._id) ?? [];
-      return {
-        ...problem,
-        categoryIds,
-        categories: categoryIds
-          .map((categoryId) => categoryById.get(categoryId))
-          .filter((category) => category !== undefined),
-      };
-    });
-  }, [rawProblems, categories, assignments]);
-
-  const editingProblem = problems.find((problem) => problem._id === editingId);
-  const loading =
-    rawProblems === undefined || categories === undefined || assignments === undefined;
+    void ensureStatsBackfill();
+  }, [ensureDefaults, ensureStatsBackfill]);
 
   const openCreate = () => {
-    setEditingId(undefined);
+    setEditingProblem(undefined);
     setFormOpen(true);
     setMobileOpen(false);
   };
 
   const openEdit = (problem: ProblemWithCategories) => {
-    setEditingId(problem._id);
+    setEditingProblem(problem);
     setFormOpen(true);
   };
 
@@ -147,18 +120,9 @@ function Tracker({
 
   const renderRoute = () => {
     if (route.kind === "not-found") return null;
-    if (loading) {
-      return (
-        <div className="grid min-h-[80vh] place-items-center">
-          <Spinner label="Opening your journal" />
-        </div>
-      );
-    }
-
     if (route.kind === "dashboard") {
       return (
         <Dashboard
-          problems={problems}
           firstName={firstName}
           onAddProblem={openCreate}
           onOpenProblem={(problem) => navigate(`/problems/${problem._id}`)}
@@ -170,8 +134,6 @@ function Tracker({
     if (route.kind === "problems") {
       return (
         <ProblemsView
-          problems={problems}
-          categories={categories ?? []}
           onAddProblem={openCreate}
           onOpenProblem={(problem) => navigate(`/problems/${problem._id}`)}
         />
@@ -179,41 +141,15 @@ function Tracker({
     }
 
     if (route.kind === "categories") {
-      return <CategoriesView categories={categories ?? []} problems={problems} />;
+      return <CategoriesView />;
     }
-
-    const problem = problems.find((item) => item._id === route.problemId);
-    if (!problem) {
-      return (
-        <MissingPage
-          title="Problem not found"
-          description="This problem may have been deleted, or the link may no longer be valid."
-          onBack={() => navigate("/problems")}
-        />
-      );
-    }
-
-    if (route.kind === "attempt") {
-      return (
-        <AttemptPage
-          problem={problem}
-          attemptId={route.attemptId}
-          onBack={() => navigate(`/problems/${problem._id}`)}
-          onDeleted={() => navigate(`/problems/${problem._id}`, { replace: true })}
-        />
-      );
-    }
-
     return (
-      <ProblemPage
-        problem={problem}
+      <ProblemRoute
+        problemId={route.problemId}
+        attemptId={route.kind === "attempt" ? route.attemptId : undefined}
         onBack={() => navigate("/problems")}
-        onOpenAttempt={(attempt) => navigate(`/problems/${problem._id}/attempts/${attempt._id}`)}
-        onEdit={() => openEdit(problem)}
-        onDelete={async () => {
-          await removeProblem({ problemId: problem._id });
-          navigate("/problems", { replace: true });
-        }}
+        onNavigate={navigate}
+        onEdit={openEdit}
       />
     );
   };
@@ -235,16 +171,70 @@ function Tracker({
         open={formOpen}
         onClose={() => {
           setFormOpen(false);
-          setEditingId(undefined);
+          setEditingProblem(undefined);
         }}
         problem={editingProblem}
-        categories={categories ?? []}
         onCreated={(problemId) => navigate(`/problems/${problemId}`)}
       />
     </Shell>
   );
 }
 
+function ProblemRoute({
+  problemId,
+  attemptId,
+  onBack,
+  onNavigate,
+  onEdit,
+}: {
+  problemId: ProblemId;
+  attemptId?: AttemptId;
+  onBack: () => void;
+  onNavigate: (path: string, options?: { replace?: boolean }) => void;
+  onEdit: (problem: ProblemWithCategories) => void;
+}) {
+  const problem = useQuery(api.problems.get, { problemId });
+  const removeProblem = useMutation(api.problems.remove);
+
+  if (problem === undefined) {
+    return (
+      <div className="grid min-h-[80vh] place-items-center">
+        <Spinner label="Opening problem" />
+      </div>
+    );
+  }
+  if (problem === null) {
+    return (
+      <MissingPage
+        title="Problem not found"
+        description="This problem may have been deleted, or the link may no longer be valid."
+        onBack={onBack}
+      />
+    );
+  }
+  if (attemptId) {
+    return (
+      <AttemptPage
+        problem={problem}
+        attemptId={attemptId}
+        onBack={() => onNavigate(`/problems/${problem._id}`)}
+        onDeleted={() => onNavigate(`/problems/${problem._id}`, { replace: true })}
+      />
+    );
+  }
+  return (
+    <ProblemPage
+      problem={problem}
+      onBack={onBack}
+      onOpenAttempt={(attempt) => onNavigate(`/problems/${problem._id}/attempts/${attempt._id}`)}
+      onEdit={() => onEdit(problem)}
+      onDelete={async () => {
+        await removeProblem({ problemId: problem._id });
+        onNavigate("/problems", { replace: true });
+      }}
+    />
+  );
+}
 function useAppRoute() {
   const [pathname, setPathname] = useState(window.location.pathname);
   useEffect(() => {

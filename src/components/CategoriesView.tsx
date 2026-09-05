@@ -1,34 +1,25 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { useMutation } from "convex/react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { Layers3, Plus, Search, Sparkles, Tag, Trash2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
-import type { Category, ProblemWithCategories } from "../lib/types";
+import type { Category } from "../lib/types";
 import { getErrorMessage } from "../lib/utils";
-import { EmptyState } from "./Primitives";
+import { EmptyState, Spinner } from "./Primitives";
 
-export function CategoriesView({
-  categories,
-  problems,
-}: {
-  categories: Category[];
-  problems: ProblemWithCategories[];
-}) {
+type CategoryWithCount = Category & { problemCount: number | null };
+
+export function CategoriesView() {
   const createCategory = useMutation(api.categories.create);
   const removeCategory = useMutation(api.categories.remove);
+  const {
+    results: categories,
+    status,
+    loadMore,
+  } = usePaginatedQuery(api.categories.listPaginated, {}, { initialNumItems: 100 });
   const [name, setName] = useState("");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  const counts = useMemo(() => {
-    const result = new Map<string, number>();
-    for (const problem of problems) {
-      for (const categoryId of problem.categoryIds) {
-        result.set(categoryId, (result.get(categoryId) ?? 0) + 1);
-      }
-    }
-    return result;
-  }, [problems]);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase();
@@ -36,6 +27,12 @@ export function CategoriesView({
       (category) => !needle || category.name.toLocaleLowerCase().includes(needle),
     );
   }, [categories, search]);
+
+  useEffect(() => {
+    if (search.trim() && status === "CanLoadMore") loadMore(100);
+  }, [loadMore, search, status]);
+
+  const isSearchingAll = Boolean(search.trim()) && status !== "Exhausted";
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
@@ -52,11 +49,14 @@ export function CategoriesView({
     }
   };
 
-  const handleRemove = async (category: Category) => {
-    const count = counts.get(category._id) ?? 0;
-    const message = count
-      ? `Remove “${category.name}” from your library and ${count} assigned problem${count === 1 ? "" : "s"}?`
-      : `Remove “${category.name}” from your library?`;
+  const handleRemove = async (category: CategoryWithCount) => {
+    const count = category.problemCount;
+    const message =
+      count === null
+        ? `Remove “${category.name}” from your library and from every assigned problem?`
+        : count
+          ? `Remove “${category.name}” from your library and ${count} assigned problem${count === 1 ? "" : "s"}?`
+          : `Remove “${category.name}” from your library?`;
     if (!window.confirm(message)) return;
     try {
       setError("");
@@ -124,7 +124,9 @@ export function CategoriesView({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-display text-2xl text-ink">Your library</h2>
-              <p className="mt-1 text-xs text-muted">{categories.length} categories available</p>
+              <p className="mt-1 text-xs text-muted">
+                {categories.length} {status === "Exhausted" ? "categories available" : "loaded"}
+              </p>
             </div>
             <label className="relative w-full sm:w-64">
               <Search
@@ -140,7 +142,15 @@ export function CategoriesView({
             </label>
           </div>
 
-          {visible.length === 0 ? (
+          {status === "LoadingFirstPage" || (isSearchingAll && visible.length === 0) ? (
+            <div className="mt-5 grid min-h-64 place-items-center rounded-[1.75rem] border border-line bg-surface shadow-card">
+              <Spinner
+                label={
+                  status === "LoadingFirstPage" ? "Loading categories" : "Searching all categories"
+                }
+              />
+            </div>
+          ) : visible.length === 0 ? (
             <div className="mt-5">
               <EmptyState
                 title="No categories found"
@@ -150,7 +160,7 @@ export function CategoriesView({
           ) : (
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((category) => {
-                const count = counts.get(category._id) ?? 0;
+                const count = category.problemCount;
                 return (
                   <article
                     key={category._id}
@@ -171,19 +181,32 @@ export function CategoriesView({
                     <h3 className="mt-5 truncate text-sm font-bold text-ink">{category.name}</h3>
                     <div className="mt-2 flex items-center justify-between text-xs text-muted">
                       <span>
-                        {count} {count === 1 ? "problem" : "problems"}
+                        {count === null
+                          ? "Calculating usage…"
+                          : `${count} ${count === 1 ? "problem" : "problems"}`}
                       </span>
                       <span>{category.isDefault ? "Starter" : "Custom"}</span>
                     </div>
                     <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-mist">
                       <div
                         className="h-full rounded-full bg-accent/70"
-                        style={{ width: `${Math.min(100, count * 18)}%` }}
+                        style={{ width: `${Math.min(100, (count ?? 0) * 18)}%` }}
                       />
                     </div>
                   </article>
                 );
               })}
+            </div>
+          )}
+          {(status === "CanLoadMore" || status === "LoadingMore") && !search.trim() && (
+            <div className="mt-5 flex justify-center">
+              <button
+                className="button-secondary"
+                onClick={() => loadMore(100)}
+                disabled={status === "LoadingMore"}
+              >
+                {status === "LoadingMore" ? "Loading…" : "Load more categories"}
+              </button>
             </div>
           )}
         </div>

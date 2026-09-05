@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import {
   ArrowRight,
   ArrowUpDown,
@@ -12,9 +13,10 @@ import {
   RefreshCcw,
   Search,
 } from "lucide-react";
-import type { Category, Difficulty, Grade, ProblemWithCategories, SortKey } from "../lib/types";
+import { api } from "../../convex/_generated/api";
+import type { Difficulty, Grade, ProblemWithCategories, SortKey } from "../lib/types";
 import { formatShortDate, sortProblems } from "../lib/utils";
-import { DifficultyBadge, EmptyState, GradeBadge } from "./Primitives";
+import { DifficultyBadge, EmptyState, GradeBadge, Spinner } from "./Primitives";
 import { SearchableSelect, type SearchableOption } from "./SearchableSelect";
 
 type GradeFilter = "all" | Grade | "strong" | "unattempted";
@@ -62,16 +64,23 @@ const SORT_OPTIONS: SearchableOption<SortKey>[] = [
 ];
 
 export function ProblemsView({
-  problems,
-  categories,
   onAddProblem,
   onOpenProblem,
 }: {
-  problems: ProblemWithCategories[];
-  categories: Category[];
   onAddProblem: () => void;
   onOpenProblem: (problem: ProblemWithCategories) => void;
 }) {
+  const {
+    results: problems,
+    status: problemStatus,
+    loadMore: loadMoreProblems,
+  } = usePaginatedQuery(api.problems.listPaginated, {}, { initialNumItems: 50 });
+  const {
+    results: categories,
+    status: categoryStatus,
+    loadMore: loadMoreCategories,
+  } = usePaginatedQuery(api.categories.listPaginated, {}, { initialNumItems: 100 });
+  const stats = useQuery(api.stats.get);
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<"all" | Difficulty>("all");
   const [grade, setGrade] = useState<GradeFilter>("all");
@@ -116,6 +125,16 @@ export function ProblemsView({
 
   const hasFilters =
     search || difficulty !== "all" || grade !== "all" || categoryId !== "all" || review !== "all";
+  const needsCompleteDataset = Boolean(hasFilters) || sort !== "recent";
+  const isLoadingCompleteDataset = needsCompleteDataset && problemStatus !== "Exhausted";
+
+  useEffect(() => {
+    if (categoryStatus === "CanLoadMore") loadMoreCategories(100);
+  }, [categoryStatus, loadMoreCategories]);
+
+  useEffect(() => {
+    if (needsCompleteDataset && problemStatus === "CanLoadMore") loadMoreProblems(50);
+  }, [loadMoreProblems, needsCompleteDataset, problemStatus]);
 
   const clearFilters = () => {
     setSearch("");
@@ -213,7 +232,16 @@ export function ProblemsView({
           </div>
           <div className="flex items-center gap-3 text-xs text-muted">
             <span>
-              Showing <strong className="text-ink">{filtered.length}</strong> of {problems.length}
+              {needsCompleteDataset && problemStatus !== "Exhausted" ? (
+                <>Searching {problems.length} loaded problems…</>
+              ) : stats?.problemCount === null || stats === undefined ? (
+                <>{filtered.length} problems loaded</>
+              ) : (
+                <>
+                  Showing <strong className="text-ink">{filtered.length}</strong> of{" "}
+                  {stats.problemCount}
+                </>
+              )}
             </span>
             {hasFilters && (
               <button className="text-button" onClick={clearFilters}>
@@ -225,7 +253,16 @@ export function ProblemsView({
       </section>
 
       <div className="mt-5">
-        {filtered.length === 0 ? (
+        {problemStatus === "LoadingFirstPage" ||
+        (isLoadingCompleteDataset && filtered.length === 0) ? (
+          <div className="panel grid min-h-64 place-items-center">
+            <Spinner
+              label={
+                problemStatus === "LoadingFirstPage" ? "Loading problems" : "Searching all problems"
+              }
+            />
+          </div>
+        ) : filtered.length === 0 ? (
           <EmptyState
             title={problems.length === 0 ? "No problems yet" : "No matches found"}
             description={
@@ -325,6 +362,18 @@ export function ProblemsView({
                 </button>
               ))}
             </div>
+            {(problemStatus === "CanLoadMore" || problemStatus === "LoadingMore") &&
+              !needsCompleteDataset && (
+                <div className="mt-5 flex justify-center">
+                  <button
+                    className="button-secondary"
+                    onClick={() => loadMoreProblems(50)}
+                    disabled={problemStatus === "LoadingMore"}
+                  >
+                    {problemStatus === "LoadingMore" ? "Loading…" : "Load more problems"}
+                  </button>
+                </div>
+              )}
           </>
         )}
       </div>

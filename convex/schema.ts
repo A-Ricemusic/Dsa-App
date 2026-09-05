@@ -15,6 +15,10 @@ export default defineSchema({
   profiles: defineTable({
     ownerId: v.string(),
     defaultCategoriesSeededAt: v.optional(v.number()),
+    problemStatsBackfillStartedAt: v.optional(v.number()),
+    problemStatsReadyAt: v.optional(v.number()),
+    categoryStatsBackfillStartedAt: v.optional(v.number()),
+    categoryStatsReadyAt: v.optional(v.number()),
   }).index("by_ownerId", ["ownerId"]),
 
   defaultCategories: defineTable({

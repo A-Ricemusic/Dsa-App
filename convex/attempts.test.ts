@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { modules } from "./test.setup";
+import { modules, registerComponents } from "./test.setup";
 
 const baseProblem = {
   name: "Two Sum",
@@ -21,6 +21,7 @@ const baseAttempt = {
 
 function createTestContext() {
   const t = convexTest(schema, modules);
+  registerComponents(t);
   return {
     t,
     alice: t.withIdentity({ subject: "alice", issuer: "https://issuer.example" }),

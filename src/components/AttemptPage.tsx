@@ -18,13 +18,13 @@ export function AttemptPage({
   onBack: () => void;
   onDeleted: () => void;
 }) {
-  const attempts = useQuery(api.attempts.listForProblem, { problemId: problem._id });
+  const attempt = useQuery(api.attempts.get, { problemId: problem._id, attemptId });
   const removeAttempt = useMutation(api.attempts.remove);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
-  if (attempts === undefined) {
+  if (attempt === undefined) {
     return (
       <div className="grid min-h-[80vh] place-items-center">
         <Spinner label="Opening attempt" />
@@ -32,8 +32,6 @@ export function AttemptPage({
     );
   }
 
-  const index = attempts.findIndex((attempt) => attempt._id === attemptId);
-  const attempt = attempts[index];
   if (!attempt) {
     return (
       <div className="page-wrap">
@@ -51,7 +49,6 @@ export function AttemptPage({
     );
   }
 
-  const attemptNumber = attempts.length - index;
   const notes = attempt.notes;
 
   const handleDelete = async () => {
@@ -75,7 +72,7 @@ export function AttemptPage({
 
       <header className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="eyebrow">Attempt {attemptNumber}</p>
+          <p className="eyebrow">Attempt details</p>
           <h1 className="mt-2 font-display text-4xl text-ink sm:text-5xl">{problem.name}</h1>
           <p className="mt-4 flex items-center gap-2 text-sm text-muted">
             <CalendarDays size={15} /> {formatDate(attempt.attemptedAt)}
@@ -145,7 +142,7 @@ export function AttemptPage({
           <section className="rounded-[1.75rem] bg-review p-6 text-white shadow-soft">
             <p className="text-xs font-semibold text-white/60">Practice context</p>
             <p className="mt-3 font-display text-3xl">
-              {attemptNumber} of {attempts.length}
+              {problem.attemptCount} total {problem.attemptCount === 1 ? "attempt" : "attempts"}
             </p>
             <p className="mt-2 text-sm leading-6 text-white/65">
               Every attempt keeps its own grade, review decision, and reflection.
