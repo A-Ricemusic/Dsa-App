@@ -620,6 +620,12 @@
   .header-account {
     margin-bottom: 0.25rem;
   }
+  .mobile-problem-meta {
+    display: flex;
+  }
+  .mobile-problem-meta .difficulty {
+    display: none;
+  }
   .date-column,
   .attempts-column {
     display: none;
@@ -643,8 +649,8 @@
   .difficulty-column {
     display: none;
   }
-  .mobile-problem-meta {
-    display: flex;
+  .mobile-problem-meta .difficulty {
+    display: inline-flex;
   }
   .problem-list th:first-child {
     width: 65%;

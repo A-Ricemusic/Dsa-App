@@ -57,6 +57,7 @@ export default function App() {
         </div>
       )}
       <Tracker
+        key={user.id}
         firstName={user.firstName ?? user.email.split("@")[0] ?? "there"}
         email={user.email}
         onSignOut={() => void signOut()}

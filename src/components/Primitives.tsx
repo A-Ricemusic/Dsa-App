@@ -9,7 +9,6 @@ export function Modal({
   eyebrow,
   children,
   width = "max-w-2xl",
-  busy = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -17,7 +16,6 @@ export function Modal({
   eyebrow?: string;
   children: ReactNode;
   width?: string;
-  busy?: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -39,15 +37,15 @@ export function Modal({
   return (
     <dialog
       ref={dialogRef}
-      closedby={busy ? "none" : "any"}
-      onClose={() => {
-        if (!busy) onClose();
+      closedby="any"
+      onClose={(event) => {
+        if (!event.currentTarget.open) onClose();
       }}
       aria-labelledby={titleId}
       className={`form-dialog ${width}`}
       onCancel={(event) => {
         event.preventDefault();
-        if (!busy) onClose();
+        onClose();
       }}
     >
       <div className="bg-surface">
@@ -58,13 +56,7 @@ export function Modal({
               {title}
             </h2>
           </div>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={onClose}
-            disabled={busy}
-            aria-label="Close dialog"
-          >
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Close dialog">
             <X size={18} />
           </button>
         </div>
