@@ -1,3 +1,4 @@
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
@@ -116,5 +117,25 @@ export const remove = mutation({
     await ctx.db.delete(args.attemptId);
     await refreshLatestAttempt(ctx, attempt.problemId, problem.attemptCount - 1);
     return null;
+  },
+});
+
+// Paginated counterpart retained alongside the legacy endpoint for existing clients.
+export const listForProblemPage = query({
+  args: { problemId: v.id("problems"), paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(schema.doc("attempts")),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    const problem = await ctx.db.get(args.problemId);
+    if (!problem || problem.ownerId !== ownerId) {
+      // A live subscription can briefly outlast its deleted parent. Never read
+      // child records for an unavailable problem, including another owner’s.
+      return { page: [], isDone: true, continueCursor: "" };
+    }
+    return await ctx.db
+      .query("attempts")
+      .withIndex("by_problemId_and_attemptedAt", (q) => q.eq("problemId", args.problemId))
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });

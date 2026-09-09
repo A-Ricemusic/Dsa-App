@@ -96,6 +96,15 @@ export function SearchableSelect<Value extends string>({
 
   const activeIndex = Math.min(highlightedIndex, Math.max(0, filteredOptions.length - 1));
 
+  const activeOptionId = filteredOptions[activeIndex]
+    ? `${listboxId}-${filteredOptions[activeIndex].value}`
+    : undefined;
+  useEffect(() => {
+    if (open && activeOptionId) {
+      document.getElementById(activeOptionId)?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [activeOptionId, open]);
+
   const handleListKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -125,11 +134,18 @@ export function SearchableSelect<Value extends string>({
   };
 
   return (
-    <div className="relative min-w-0" ref={rootRef}>
+    <div
+      className="relative min-w-0"
+      ref={rootRef}
+      onBlurCapture={(event) => {
+        if (open && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget))
+          close();
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
-        className={`flex min-h-12 w-full items-center gap-2 rounded-xl border bg-surface px-3.5 text-left text-sm font-bold text-ink shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+        className={`flex min-h-11 w-full items-center gap-2 rounded-md border bg-surface px-3 text-left text-sm font-medium text-ink transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           open
             ? "border-accent/60 ring-3 ring-accent/10"
             : "border-line hover:border-stone hover:bg-mist"
@@ -162,7 +178,7 @@ export function SearchableSelect<Value extends string>({
             onClick={() => close(true)}
           />
           <section
-            className={`fixed inset-x-3 bottom-3 z-50 flex max-h-[min(78vh,36rem)] flex-col overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-modal sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:z-30 sm:mt-2 sm:max-h-96 sm:w-72 sm:rounded-2xl ${
+            className={`fixed inset-x-3 bottom-3 z-50 flex max-h-[min(78vh,36rem)] flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-modal sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-full sm:z-30 sm:mt-2 sm:max-h-96 sm:w-72 sm:rounded-lg ${
               align === "end" ? "sm:right-0" : "sm:left-0"
             }`}
           >
@@ -200,11 +216,7 @@ export function SearchableSelect<Value extends string>({
                   aria-label={`Search ${label.toLocaleLowerCase()} options`}
                   aria-expanded="true"
                   aria-controls={listboxId}
-                  aria-activedescendant={
-                    filteredOptions[activeIndex]
-                      ? `${listboxId}-${filteredOptions[activeIndex].value}`
-                      : undefined
-                  }
+                  aria-activedescendant={activeOptionId}
                   autoComplete="off"
                 />
                 {query && (
@@ -231,7 +243,7 @@ export function SearchableSelect<Value extends string>({
             >
               {filteredOptions.length === 0 ? (
                 <div className="px-4 py-8 text-center">
-                  <p className="text-sm font-bold text-ink">No options found</p>
+                  <p className="text-sm font-medium text-ink">No options found</p>
                   <p className="mt-1 text-xs text-muted">Try a shorter search.</p>
                 </div>
               ) : (
@@ -244,8 +256,9 @@ export function SearchableSelect<Value extends string>({
                       key={option.value}
                       type="button"
                       role="option"
+                      tabIndex={-1}
                       aria-selected={isSelected}
-                      className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                      className={`flex min-h-12 w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition ${
                         isHighlighted ? "bg-mist" : "hover:bg-mist/70"
                       }`}
                       onMouseEnter={() => setHighlightedIndex(index)}
@@ -254,14 +267,14 @@ export function SearchableSelect<Value extends string>({
                       <span
                         className={`grid size-6 shrink-0 place-items-center rounded-lg border ${
                           isSelected
-                            ? "border-accent bg-accent text-white"
+                            ? "border-accent bg-accent text-on-accent"
                             : "border-line bg-surface text-transparent"
                         }`}
                       >
                         <Check size={13} strokeWidth={3} />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold text-ink">
+                        <span className="block truncate text-sm font-medium text-ink">
                           {option.label}
                         </span>
                         {option.description && (

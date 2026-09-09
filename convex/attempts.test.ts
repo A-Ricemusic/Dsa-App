@@ -216,13 +216,15 @@ describe("attempts", () => {
     const { alice } = createTestContext();
     const problemId = await alice.mutation(api.problems.create, baseProblem);
 
-    await expect(
-      alice.mutation(api.attempts.create, {
-        problemId,
-        ...baseAttempt,
-        attemptedAt: 0,
-      }),
-    ).rejects.toThrow("valid attempt date");
+    for (const attemptedAt of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, 1e20]) {
+      await expect(
+        alice.mutation(api.attempts.create, {
+          problemId,
+          ...baseAttempt,
+          attemptedAt,
+        }),
+      ).rejects.toThrow("valid attempt date");
+    }
     await expect(
       alice.mutation(api.attempts.create, {
         problemId,

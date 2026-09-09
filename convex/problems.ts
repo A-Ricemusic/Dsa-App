@@ -1,3 +1,4 @@
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -200,5 +201,32 @@ export const remove = mutation({
       problemId: args.problemId,
     });
     return null;
+  },
+});
+
+// Paginated counterpart retained alongside the legacy endpoint for existing clients.
+export const listPage = query({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(schema.doc("problems")),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    return await ctx.db
+      .query("problems")
+      .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", ownerId))
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+
+// Paginated counterpart retained alongside the legacy endpoint for existing clients.
+export const listCategoryAssignmentsPage = query({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(schema.doc("problemCategories")),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    return await ctx.db
+      .query("problemCategories")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
+      .paginate(args.paginationOpts);
   },
 });
