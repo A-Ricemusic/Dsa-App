@@ -67,7 +67,8 @@ export function Modal({
 }
 
 export function DifficultyBadge({ difficulty }: { difficulty: Difficulty }) {
-  return <span className={`difficulty difficulty-${difficulty}`}>{difficulty}</span>;
+  const baseDifficulty = difficulty.replace(/[+-]$/, "");
+  return <span className={`difficulty difficulty-${baseDifficulty}`}>{difficulty}</span>;
 }
 
 export function GradeBadge({ grade, large = false }: { grade?: Grade; large?: boolean }) {

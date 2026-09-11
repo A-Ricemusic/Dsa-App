@@ -11,6 +11,7 @@ import {
   Search,
 } from "lucide-react";
 import type { Category, Difficulty, Grade, ProblemWithCategories, SortKey } from "../lib/types";
+import { DIFFICULTIES } from "../lib/types";
 import { sortProblems } from "../lib/utils";
 import { EmptyState } from "./Primitives";
 import { ProblemList } from "./ProblemList";
@@ -21,9 +22,10 @@ type ReviewFilter = "all" | "review" | "no-review";
 
 const DIFFICULTY_OPTIONS: SearchableOption<"all" | Difficulty>[] = [
   { value: "all", label: "All difficulties", keywords: ["any"] },
-  { value: "easy", label: "Easy" },
-  { value: "medium", label: "Medium" },
-  { value: "hard", label: "Hard" },
+  ...DIFFICULTIES.map((value) => ({
+    value,
+    label: value.charAt(0).toUpperCase() + value.slice(1),
+  })),
 ];
 
 const GRADE_OPTIONS: SearchableOption<GradeFilter>[] = [

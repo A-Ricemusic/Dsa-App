@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-const difficulty = v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"));
+import { difficultyValidator } from "./lib/validators";
 
 const grade = v.union(
   v.literal("A"),
@@ -29,7 +29,7 @@ export default defineSchema({
     ownerId: v.string(),
     name: v.string(),
     url: v.string(),
-    difficulty,
+    difficulty: difficultyValidator,
     attemptCount: v.number(),
     latestAttemptAt: v.optional(v.number()),
     latestGrade: v.optional(grade),

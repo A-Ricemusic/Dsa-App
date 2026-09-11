@@ -22,6 +22,32 @@ function createTestContext() {
 }
 
 describe("problems and attempts", () => {
+  it.each([
+    "easy-",
+    "easy",
+    "easy+",
+    "medium-",
+    "medium",
+    "medium+",
+    "hard-",
+    "hard",
+    "hard+",
+  ] as const)("creates and updates problems with difficulty %s", async (difficulty) => {
+    const { alice } = createTestContext();
+    const createdId = await alice.mutation(api.problems.create, { ...baseProblem, difficulty });
+    const existingId = await alice.mutation(api.problems.create, baseProblem);
+
+    await alice.mutation(api.problems.update, {
+      ...baseProblem,
+      problemId: existingId,
+      difficulty,
+    });
+
+    const problems = await alice.query(api.problems.list);
+    expect(problems.find((problem) => problem._id === createdId)?.difficulty).toBe(difficulty);
+    expect(problems.find((problem) => problem._id === existingId)?.difficulty).toBe(difficulty);
+  });
+
   it("requires authentication for user data", async () => {
     const { t } = createTestContext();
 

@@ -1,9 +1,15 @@
 import { v } from "convex/values";
 
 export const difficultyValidator = v.union(
+  v.literal("easy-"),
   v.literal("easy"),
+  v.literal("easy+"),
+  v.literal("medium-"),
   v.literal("medium"),
+  v.literal("medium+"),
+  v.literal("hard-"),
   v.literal("hard"),
+  v.literal("hard+"),
 );
 
 export const gradeValidator = v.union(

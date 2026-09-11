@@ -20,6 +20,20 @@ beforeEach(() => {
   };
 });
 
+it("loads a refined difficulty and saves a different one", async () => {
+  const user = userEvent.setup();
+  const problem = makeProblem({ difficulty: "easy-" });
+  render(<ProblemForm open onClose={vi.fn<() => void>()} categories={[]} problem={problem} />);
+
+  expect(screen.getByRole("button", { name: "easy-" })).toHaveAttribute("aria-pressed", "true");
+  await user.click(screen.getByRole("button", { name: "hard+" }));
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+  expect(mocks.mutation).toHaveBeenCalledWith(
+    expect.objectContaining({ problemId: problem._id, difficulty: "hard+" }),
+  );
+});
+
 it("preserves problem edits across live refreshes, but resets when reopened", async () => {
   const user = userEvent.setup();
   const problem = makeProblem();

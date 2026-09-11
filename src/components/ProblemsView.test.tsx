@@ -52,6 +52,48 @@ function renderProblems() {
 }
 
 describe("ProblemsView filters", () => {
+  it("filters a refined difficulty independently of its base difficulty", async () => {
+    const user = userEvent.setup();
+    render(
+      <ProblemsView
+        problems={[
+          ...problems,
+          makeProblem({
+            _id: "problem-plus" as ProblemId,
+            name: "Medium Plus",
+            difficulty: "medium+",
+          }),
+        ]}
+        categories={[]}
+        onAddProblem={vi.fn<() => void>()}
+        onOpenProblem={vi.fn<(problem: ProblemWithCategories) => void>()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "All difficulties" }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "All difficulties",
+      "Easy-",
+      "Easy",
+      "Easy+",
+      "Medium-",
+      "Medium",
+      "Medium+",
+      "Hard-",
+      "Hard",
+      "Hard+",
+    ]);
+    await user.click(screen.getByRole("option", { name: "Medium+" }));
+
+    expect(screen.getByRole("button", { name: "Medium Plus" })).toBeInTheDocument();
+    expect(screen.queryByText("Array Search")).not.toBeInTheDocument();
+    expect(
+      screen
+        .getAllByText("medium+")
+        .every((badge) => badge.classList.contains("difficulty-medium")),
+    ).toBe(true);
+  });
+
   it("shows only problems whose latest attempt needs review", async () => {
     const user = userEvent.setup();
     renderProblems();

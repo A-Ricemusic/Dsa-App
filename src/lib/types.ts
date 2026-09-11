@@ -1,6 +1,17 @@
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 
-export type Difficulty = "easy" | "medium" | "hard";
+export type Difficulty = Doc<"problems">["difficulty"];
+export const DIFFICULTIES = [
+  "easy-",
+  "easy",
+  "easy+",
+  "medium-",
+  "medium",
+  "medium+",
+  "hard-",
+  "hard",
+  "hard+",
+] as const satisfies readonly Difficulty[];
 export type Grade = "A" | "B" | "C" | "D" | "F";
 export type View = "dashboard" | "problems" | "categories";
 export type SortKey = "recent" | "grade" | "attempts" | "name";

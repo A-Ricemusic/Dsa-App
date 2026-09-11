@@ -3,6 +3,7 @@ import { useEffect, useRef, useMemo, useState, type FormEvent } from "react";
 import { useMutation } from "convex/react";
 import { Check, Plus, Search, Tag, X } from "lucide-react";
 import { api } from "../../convex/_generated/api";
+import { DIFFICULTIES } from "../lib/types";
 import type {
   Category,
   CategoryId,
@@ -230,7 +231,7 @@ export function ProblemForm({
             <fieldset>
               <legend className="field-label">Difficulty</legend>
               <div className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-mist p-1.5">
-                {(["easy", "medium", "hard"] as const).map((value) => (
+                {DIFFICULTIES.map((value) => (
                   <button
                     type="button"
                     key={value}
