@@ -79,6 +79,7 @@ function Tracker({
   routing: ReturnType<typeof useAppRoute>;
 }) {
   const rawProblems = useCompleteQuery(api.problems.listPage, {});
+  const attemptGrades = useCompleteQuery(api.attempts.listGradesPage, {});
   const rawCategories = useCompleteQuery(api.categories.listPage, {});
   const categories = useMemo(
     () =>
@@ -129,7 +130,10 @@ function Tracker({
 
   const editingProblem = problems.find((problem) => problem._id === editingId);
   const loading =
-    rawProblems === undefined || categories === undefined || assignments === undefined;
+    rawProblems === undefined ||
+    attemptGrades === undefined ||
+    categories === undefined ||
+    assignments === undefined;
 
   const openCreate = () => {
     setEditingId(undefined);
@@ -167,6 +171,7 @@ function Tracker({
       return (
         <Dashboard
           problems={problems}
+          attemptGrades={attemptGrades ?? []}
           firstName={firstName}
           onAddProblem={openCreate}
           onOpenProblem={(problem) => navigate(`/problems/${problem._id}`)}

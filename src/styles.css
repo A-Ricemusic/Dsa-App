@@ -477,7 +477,7 @@
     @apply mt-2 text-sm leading-6 text-muted;
   }
   .stats-strip {
-    @apply my-8 grid grid-cols-2 gap-y-5 border-y border-line py-5 sm:grid-cols-4;
+    @apply my-8 grid grid-cols-2 gap-y-5 border-y border-line py-5 sm:grid-cols-5;
   }
   .stats-strip > div {
     @apply border-r border-line px-5 first:pl-0 last:border-0 sm:px-7;
@@ -645,6 +645,14 @@
     width: 45%;
   }
 }
+@media (max-width: 639px) {
+  .stats-strip > div:nth-child(even) {
+    border: 0;
+  }
+  .stats-strip > div:nth-child(odd) {
+    padding-left: 0;
+  }
+}
 @media (max-width: 479px) {
   .difficulty-column {
     display: none;
@@ -654,12 +662,6 @@
   }
   .problem-list th:first-child {
     width: 65%;
-  }
-  .stats-strip > div:nth-child(2) {
-    border: 0;
-  }
-  .stats-strip > div:nth-child(3) {
-    padding-left: 0;
   }
 }
 

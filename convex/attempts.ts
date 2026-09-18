@@ -5,7 +5,7 @@ import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireOwnerId } from "./lib/auth";
 import { cleanAttemptInput } from "./lib/attempts";
-import { attemptInputValidator } from "./lib/validators";
+import { attemptInputValidator, gradeValidator } from "./lib/validators";
 import schema from "./schema";
 
 async function requireProblem(ctx: MutationCtx, ownerId: string, problemId: Id<"problems">) {
@@ -137,5 +137,22 @@ export const listForProblemPage = query({
       .withIndex("by_problemId_and_attemptedAt", (q) => q.eq("problemId", args.problemId))
       .order("desc")
       .paginate(args.paginationOpts);
+  },
+});
+
+export const listGradesPage = query({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(v.object({ grade: gradeValidator })),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    const result = await ctx.db
+      .query("attempts")
+      .withIndex("by_ownerId_and_attemptedAt", (q) => q.eq("ownerId", ownerId))
+      .order("desc")
+      .paginate(args.paginationOpts);
+    return {
+      ...result,
+      page: result.page.map(({ grade }) => ({ grade })),
+    };
   },
 });

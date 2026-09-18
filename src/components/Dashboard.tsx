@@ -6,12 +6,14 @@ import { ProblemList } from "./ProblemList";
 
 export function Dashboard({
   problems,
+  attemptGrades,
   firstName,
   onAddProblem,
   onOpenProblem,
   onSeeAll,
 }: {
   problems: ProblemWithCategories[];
+  attemptGrades: { grade: Grade }[];
   firstName: string;
   onAddProblem: () => void;
   onOpenProblem: (problem: ProblemWithCategories) => void;
@@ -23,6 +25,12 @@ export function Dashboard({
   );
   const recent = sortProblems(problems, "recent").slice(0, 6);
   const attempts = problems.reduce((sum, problem) => sum + problem.attemptCount, 0);
+  const passingAttempts = attemptGrades.filter(
+    ({ grade }) => grade === "A" || grade === "B",
+  ).length;
+  const passRate = attemptGrades.length
+    ? `${Math.round((passingAttempts / attemptGrades.length) * 100)}%`
+    : "—";
   const gradedCount = problems.filter((problem) => problem.latestGrade).length;
   const counts = (["A", "B", "C", "D", "F"] as Grade[]).map((grade) => ({
     grade,
@@ -58,6 +66,10 @@ export function Dashboard({
         <div>
           <dt>To review</dt>
           <dd className={reviewQueue.length ? "text-review-light" : ""}>{reviewQueue.length}</dd>
+        </div>
+        <div>
+          <dt>Pass rate</dt>
+          <dd>{passRate}</dd>
         </div>
       </dl>
       {problems.length === 0 ? (

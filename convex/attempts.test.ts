@@ -89,6 +89,39 @@ describe("attempts", () => {
     ]);
   });
 
+  it("lists only the signed-in owner's grades for pass-rate calculation", async () => {
+    const { t, alice, bob } = createTestContext();
+    const aliceProblemId = await alice.mutation(api.problems.create, baseProblem);
+    const bobProblemId = await bob.mutation(api.problems.create, baseProblem);
+    await alice.mutation(api.attempts.create, {
+      problemId: aliceProblemId,
+      ...baseAttempt,
+      grade: "A",
+    });
+    await alice.mutation(api.attempts.create, {
+      problemId: aliceProblemId,
+      ...baseAttempt,
+      attemptedAt: baseAttempt.attemptedAt + 1,
+      grade: "C",
+    });
+    await bob.mutation(api.attempts.create, {
+      problemId: bobProblemId,
+      ...baseAttempt,
+      grade: "B",
+    });
+
+    const paginationOpts = { numItems: 10, cursor: null };
+    await expect(t.query(api.attempts.listGradesPage, { paginationOpts })).rejects.toThrow(
+      "signed in",
+    );
+    await expect(
+      alice.query(api.attempts.listGradesPage, { paginationOpts }),
+    ).resolves.toMatchObject({
+      page: [{ grade: "C" }, { grade: "A" }],
+      isDone: true,
+    });
+  });
+
   it("recomputes the latest summary when an attempt date changes", async () => {
     const { alice } = createTestContext();
     const problemId = await alice.mutation(api.problems.create, baseProblem);
