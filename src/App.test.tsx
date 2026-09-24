@@ -25,6 +25,7 @@ vi.mock("./auth/AuthProvider", () => ({ useAuth: mocks.auth }));
 vi.mock("convex/react", () => ({
   useConvexAuth: () => ({ isLoading: false, isAuthenticated: true }),
   useMutation: () => mocks.mutation,
+  useConvex: () => ({ query: vi.fn<() => void>() }),
   usePaginatedQuery: (reference: Parameters<typeof getFunctionName>[0]) => ({
     results: getFunctionName(reference) === "problems:listPage" ? problems : [],
     status: "Exhausted",

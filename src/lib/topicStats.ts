@@ -1,4 +1,5 @@
 import type { Category, ProblemWithCategories } from "./types";
+import type { ProblemAttempts } from "./attemptExport";
 import { GRADE_POINTS } from "./utils";
 
 export type TopicStats = {
@@ -83,7 +84,11 @@ const escape = (value: string | number) => {
   return `"${safe.replaceAll('"', '""')}"`;
 };
 
-export function topicsCsv(rows: TopicStats[], exportedAt = new Date()) {
+export function topicsCsv(
+  rows: TopicStats[],
+  exportedAt = new Date(),
+  histories: ProblemAttempts[] = [],
+) {
   return (
     [
       [
@@ -97,6 +102,17 @@ export function topicsCsv(rows: TopicStats[], exportedAt = new Date()) {
         "Focus",
         "Exported at (UTC)",
         "Methodology",
+        "Record type",
+        "Problem ID",
+        "Problem",
+        "Problem URL",
+        "Difficulty",
+        "Recent attempt slot (1 = newest)",
+        "Attempt ID",
+        "Attempt date (UTC)",
+        "Attempt grade",
+        "Review again",
+        "Attempt notes",
       ],
       ...rows.map((row) => [
         row.name,
@@ -109,17 +125,41 @@ export function topicsCsv(rows: TopicStats[], exportedAt = new Date()) {
         topicFocus(row),
         exportedAt.toISOString(),
         "All-time; one latest grade per attempted question; A=4 B=3 C=2 D=1 F=0; ungraded excluded; multi-topic questions count in each topic; needs practice below 2.5; topics are assigned categories",
+        "Topic summary",
+        ...Array<string>(10).fill("NA"),
       ]),
+      ...histories.flatMap(({ problem, attempts }) =>
+        Array.from({ length: 5 }, (_, index) => {
+          const attempt = attempts[index];
+          return [
+            problem.categories.map((category) => category.name).join("; ") || "Uncategorized",
+            ...Array<string>(7).fill("NA"),
+            exportedAt.toISOString(),
+            "Latest five attempts per problem by attempt date, newest first; slot 1 is newest, not lifetime attempt number; NA means missing attempt or empty notes; summaries use all-time latest grades; notes are recorded per attempt",
+            "Problem attempt",
+            problem._id,
+            problem.name,
+            problem.url,
+            problem.difficulty,
+            index + 1,
+            attempt?._id ?? "NA",
+            attempt ? new Date(attempt.attemptedAt).toISOString() : "NA",
+            attempt?.grade ?? "NA",
+            attempt ? (attempt.shouldReviewAgain ? "Yes" : "No") : "NA",
+            attempt?.notes || "NA",
+          ];
+        }),
+      ),
     ]
       .map((row) => row.map(escape).join(","))
       .join("\r\n") + "\r\n"
   );
 }
 
-export function downloadTopicsCsv(rows: TopicStats[]) {
+export function downloadTopicsCsv(rows: TopicStats[], histories: ProblemAttempts[] = []) {
   const now = new Date();
   const url = URL.createObjectURL(
-    new Blob(["\uFEFF", topicsCsv(rows, now)], { type: "text/csv;charset=utf-8" }),
+    new Blob(["\uFEFF", topicsCsv(rows, now, histories)], { type: "text/csv;charset=utf-8" }),
   );
   const link = document.createElement("a");
   link.href = url;

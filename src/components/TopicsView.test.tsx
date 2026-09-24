@@ -1,14 +1,21 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { makeCategory, makeProblem } from "../test/factories";
 import { TopicsView } from "./TopicsView";
 
+const mocks = vi.hoisted(() => ({
+  query: vi.fn<() => Promise<{ page: never[]; isDone: boolean; continueCursor: string }>>(),
+}));
+vi.mock("convex/react", () => ({ useConvex: () => ({ query: mocks.query }) }));
+
 afterEach(() => {
+  mocks.query.mockReset();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
-it("renders unpracticed topics, latest averages, and downloads the complete CSV", () => {
+it("renders unpracticed topics, latest averages, and downloads the complete CSV", async () => {
+  mocks.query.mockResolvedValue({ page: [], isDone: true, continueCursor: "" });
   const dfs = makeCategory("Depth-first search");
   const bfs = makeCategory("Breadth-first search");
   const createObjectURL = vi.fn<() => string>().mockReturnValue("blob:topics");
@@ -32,7 +39,9 @@ it("renders unpracticed topics, latest averages, and downloads the complete CSV"
   expect(within(table).getByText("1 / 1")).toBeVisible();
   expect(within(table).getByText("Not practiced")).toBeVisible();
   expect(within(table).getByText("—")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  });
   expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
   expect(click).toHaveBeenCalledOnce();
   vi.runAllTimers();
@@ -44,4 +53,38 @@ it("shows an empty state and disables export without topics or questions", () =>
   render(<TopicsView categories={[]} problems={[]} />);
   expect(screen.getByText("Build your topic overview")).toBeVisible();
   expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+});
+
+it("loads only on export, prevents duplicate requests, and permits retry after failure", async () => {
+  let rejectRequest!: (reason: Error) => void;
+  mocks.query.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectRequest = reject;
+      }),
+  );
+  const createObjectURL = vi.fn<() => string>();
+  vi.stubGlobal("URL", { createObjectURL });
+  render(<TopicsView categories={[]} problems={[makeProblem({ attemptCount: 1 })]} />);
+  expect(mocks.query).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  const busy = screen.getByRole("button", { name: "Preparing CSV…" });
+  expect(busy).toBeDisabled();
+  fireEvent.click(busy);
+  expect(mocks.query).toHaveBeenCalledOnce();
+  expect(mocks.query).toHaveBeenCalledWith(expect.anything(), {
+    problemId: "problem-default",
+    paginationOpts: { cursor: null, numItems: 5 },
+  });
+  await act(async () => {
+    rejectRequest(new Error("Offline"));
+  });
+  expect(screen.getByRole("alert")).toHaveTextContent("Please try again");
+  expect(createObjectURL).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Export CSV" })).toBeEnabled();
+  mocks.query.mockRejectedValueOnce(new Error("Still offline"));
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  });
+  expect(mocks.query).toHaveBeenCalledTimes(2);
 });
