@@ -147,3 +147,22 @@ it("offers retry when default category setup fails without hiding the journal", 
   expect(mocks.mutation).toHaveBeenCalledTimes(2);
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
+
+it("opens topic insights from navigation and supports direct routes and back", async () => {
+  const user = userEvent.setup();
+  mocks.auth.mockReturnValue(
+    authState({ user: { id: "test", email: "test@example.com", firstName: "Test" } }),
+  );
+  const app = renderApp();
+  await user.click(within(screen.getByRole("navigation")).getByRole("button", { name: "Topics" }));
+  expect(window.location.pathname).toBe("/topics");
+  expect(screen.getByRole("heading", { name: "Topic overview" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Topics" })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("rowheader", { name: "Uncategorized" })).toBeVisible();
+  app.unmount();
+  renderApp();
+  expect(screen.getByRole("heading", { name: "Topic overview" })).toBeVisible();
+  window.history.replaceState(null, "", "/");
+  fireEvent.popState(window);
+  expect(screen.getByRole("heading", { name: "Overview" })).toBeVisible();
+});

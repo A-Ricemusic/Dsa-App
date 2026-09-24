@@ -5,6 +5,8 @@ it.each([
   ["/", "dashboard"],
   ["/problems", "problems"],
   ["/categories", "categories"],
+  ["/topics", "topics"],
+  ["/topics/extra", "not-found"],
   ["/problems/example", "problem"],
   ["/problems/example/attempts/example", "attempt"],
   ["/does-not-exist", "not-found"],
