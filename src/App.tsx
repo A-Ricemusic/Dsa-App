@@ -8,6 +8,7 @@ import { api } from "../convex/_generated/api";
 import type { ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
+import { TopicsView } from "./components/TopicsView";
 import { Dashboard } from "./components/Dashboard";
 import { ProblemForm } from "./components/ProblemForm";
 import { ProblemPage } from "./components/ProblemPage";
@@ -148,9 +149,11 @@ function Tracker({
   const activeView: View =
     route.kind === "dashboard"
       ? "dashboard"
-      : route.kind === "categories"
-        ? "categories"
-        : "problems";
+      : route.kind === "topics"
+        ? "topics"
+        : route.kind === "categories"
+          ? "categories"
+          : "problems";
 
   const changeView = (view: View) => {
     setReviewOnly(false);
@@ -181,6 +184,10 @@ function Tracker({
           }}
         />
       );
+    }
+
+    if (route.kind === "topics") {
+      return <TopicsView categories={categories ?? []} problems={problems} />;
     }
 
     if (route.kind === "problems") {

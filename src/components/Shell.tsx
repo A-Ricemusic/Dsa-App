@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { BookOpen, LayoutDashboard, Layers3, LogOut } from "lucide-react";
+import { ChartNoAxesCombined, BookOpen, LayoutDashboard, Layers3, LogOut } from "lucide-react";
 import type { View } from "../lib/types";
 import { ThemeToggle } from "./Theme";
 
 const navigation = [
   { id: "dashboard" as const, label: "Overview", icon: LayoutDashboard },
+  { id: "topics" as const, label: "Topics", icon: ChartNoAxesCombined },
   { id: "problems" as const, label: "Problems", icon: BookOpen },
   { id: "categories" as const, label: "Categories", icon: Layers3 },
 ];
