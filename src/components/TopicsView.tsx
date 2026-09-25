@@ -5,6 +5,7 @@ import { exportRange, loadExportAttempts, type ExportPeriod } from "../lib/attem
 import { Download } from "lucide-react";
 import type { Category, ProblemWithCategories } from "../lib/types";
 import { buildTopicStats, downloadTopicsCsv, topicFocus } from "../lib/topicStats";
+import { ExportRangeSelect } from "./ExportRangeSelect";
 import { EmptyState } from "./Primitives";
 
 export function TopicsView({
@@ -79,22 +80,14 @@ export function TopicsView({
         </div>
       </div>
       <div className="flex flex-wrap items-end gap-4">
-        <label className="field">
-          <span>CSV date range</span>
-          <select
-            value={period}
-            disabled={exporting}
-            onChange={(event) => {
-              setPeriod(event.target.value as ExportPeriod);
-              setExportError("");
-            }}
-          >
-            <option value="all">All time</option>
-            <option value="month">Past 30 days</option>
-            <option value="year">Past 365 days</option>
-            <option value="custom">Custom dates</option>
-          </select>
-        </label>
+        <ExportRangeSelect
+          value={period}
+          disabled={exporting}
+          onChange={(value) => {
+            setPeriod(value);
+            setExportError("");
+          }}
+        />
         {period === "custom" && (
           <>
             <label className="field">

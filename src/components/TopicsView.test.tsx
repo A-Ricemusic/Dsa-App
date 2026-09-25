@@ -94,12 +94,13 @@ it("offers export ranges, validates custom dates, and reports when none match", 
   mocks.query.mockResolvedValue({ page: [], isDone: true, continueCursor: "" });
   render(<TopicsView categories={[]} problems={[makeProblem({ attemptCount: 1 })]} />);
   const range = screen.getByRole("combobox", { name: "CSV date range" });
+  fireEvent.click(range);
   expect(
-    within(range)
+    within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent),
   ).toEqual(["All time", "Past 30 days", "Past 365 days", "Custom dates"]);
-  fireEvent.change(range, { target: { value: "custom" } });
+  fireEvent.click(screen.getByRole("option", { name: "Custom dates" }));
   fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
   expect(screen.getByRole("alert")).toHaveTextContent("Choose a valid start and end date");
   expect(mocks.query).not.toHaveBeenCalled();
@@ -144,9 +145,8 @@ it("downloads the selected period with matching category totals and five notes c
       ]}
     />,
   );
-  fireEvent.change(screen.getByRole("combobox", { name: "CSV date range" }), {
-    target: { value: "custom" },
-  });
+  fireEvent.click(screen.getByRole("combobox", { name: "CSV date range" }));
+  fireEvent.click(screen.getByRole("option", { name: "Custom dates" }));
   fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-09-06" } });
   fireEvent.change(screen.getByLabelText("Through"), { target: { value: "2026-09-07" } });
   await act(async () => {
@@ -169,4 +169,24 @@ it("downloads the selected period with matching category totals and five notes c
   expect(csv).not.toContain("Old notes");
   expect(csv).not.toContain("Problem ID");
   expect(csv).not.toContain("Record type");
+});
+
+it("supports keyboard selection and dismisses the custom range menu", () => {
+  render(<TopicsView categories={[]} problems={[makeProblem()]} />);
+  const range = screen.getByRole("combobox", { name: "CSV date range" });
+  range.focus();
+  fireEvent.keyDown(range, { key: "ArrowDown" });
+  expect(screen.getByRole("option", { name: "All time" })).toHaveAttribute("aria-selected", "true");
+  fireEvent.keyDown(range, { key: "End" });
+  fireEvent.keyDown(range, { key: "Enter" });
+  expect(range).toHaveTextContent("Custom dates");
+  expect(screen.getByLabelText("From")).toBeVisible();
+  expect(range).toHaveFocus();
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  fireEvent.click(range);
+  fireEvent.keyDown(range, { key: "Escape" });
+  expect(range).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(range);
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
 });
