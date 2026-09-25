@@ -8,6 +8,7 @@ import { requireOwnerId } from "./lib/auth";
 import { cleanAttemptInput } from "./lib/attempts";
 import { attemptInputValidator, difficultyValidator } from "./lib/validators";
 import schema from "./schema";
+import { cleanReviewDate } from "./lib/reviewDate";
 
 const CLEANUP_BATCH_SIZE = 100;
 
@@ -121,6 +122,7 @@ export const create = mutation({
     url: v.string(),
     difficulty: difficultyValidator,
     categoryIds: v.array(v.id("categories")),
+    reviewDate: v.optional(v.union(v.string(), v.null())),
     firstAttempt: v.optional(attemptInputValidator),
   },
   returns: v.id("problems"),
@@ -140,6 +142,7 @@ export const create = mutation({
       latestAttemptAt: firstAttempt?.attemptedAt,
       latestGrade: firstAttempt?.grade,
       latestShouldReview: firstAttempt?.shouldReviewAgain ?? false,
+      reviewDate: cleanReviewDate(args.reviewDate),
       createdAt: now,
       updatedAt: now,
     });
@@ -167,6 +170,7 @@ export const update = mutation({
     url: v.string(),
     difficulty: difficultyValidator,
     categoryIds: v.array(v.id("categories")),
+    reviewDate: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -180,6 +184,7 @@ export const update = mutation({
       name: cleaned.name,
       url: cleaned.url,
       difficulty: args.difficulty,
+      ...(args.reviewDate !== undefined ? { reviewDate: cleanReviewDate(args.reviewDate) } : {}),
       updatedAt: Date.now(),
     });
     await setCategories(ctx, ownerId, args.problemId, args.categoryIds);
@@ -239,18 +244,8 @@ export const setReviewDate = mutation({
     const ownerId = await requireOwnerId(ctx);
     const problem = await ctx.db.get(args.problemId);
     if (!problem || problem.ownerId !== ownerId) throw new ConvexError("Problem not found.");
-    if (args.reviewDate !== null) {
-      const date = new Date(args.reviewDate + "T12:00:00Z");
-      if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(args.reviewDate) ||
-        !Number.isFinite(date.getTime()) ||
-        date.toISOString().slice(0, 10) !== args.reviewDate
-      ) {
-        throw new ConvexError("Enter a valid review date.");
-      }
-    }
     await ctx.db.patch(args.problemId, {
-      reviewDate: args.reviewDate ?? undefined,
+      reviewDate: cleanReviewDate(args.reviewDate),
       updatedAt: Date.now(),
     });
     return null;

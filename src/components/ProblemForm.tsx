@@ -39,6 +39,7 @@ export function ProblemForm({
   const [attemptedAt, setAttemptedAt] = useState(dateInputValue());
   const [grade, setGrade] = useState<Grade>("B");
   const [shouldReviewAgain, setShouldReviewAgain] = useState(false);
+  const [reviewDate, setReviewDate] = useState<string>();
   const [notes, setNotes] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const formKey = `problem:${problem?._id ?? "new"}`;
@@ -53,6 +54,7 @@ export function ProblemForm({
     grade: Grade;
     shouldReviewAgain: boolean;
     notes: string;
+    reviewDate?: string;
     categorySearch: string;
   }>(formKey);
   const busy = request.pending;
@@ -78,6 +80,7 @@ export function ProblemForm({
     attemptedAt,
     grade,
     shouldReviewAgain,
+    reviewDate,
     notes,
     categorySearch,
   });
@@ -105,6 +108,7 @@ export function ProblemForm({
     setAttemptedAt(savedDraft?.attemptedAt ?? dateInputValue());
     setGrade(savedDraft?.grade ?? "B");
     setShouldReviewAgain(savedDraft?.shouldReviewAgain ?? false);
+    setReviewDate(savedDraft?.reviewDate);
     setNotes(savedDraft?.notes ?? "");
     setCategorySearch(savedDraft?.categorySearch ?? "");
     setError("");
@@ -161,7 +165,13 @@ export function ProblemForm({
     }
     setError("");
     const currentSession = session.current;
-    const values = { name, url, difficulty, categoryIds: [...selected] };
+    const values = {
+      name,
+      url,
+      difficulty,
+      categoryIds: [...selected],
+      reviewDate: reviewDate === undefined ? undefined : reviewDate || null,
+    };
     const completed = await request.run(draft("save"), async () => {
       if (problem) {
         await updateProblem({ problemId: problem._id, ...values });
@@ -322,6 +332,17 @@ export function ProblemForm({
                 </div>
               </div>
             </div>
+
+            <label className="field">
+              <span>Review date</span>
+              <input
+                type="date"
+                max="9999-12-31"
+                value={reviewDate ?? problem?.reviewDate ?? ""}
+                onChange={(event) => setReviewDate(event.target.value)}
+              />
+              <small>Optional. Saved to your calendar with this problem.</small>
+            </label>
 
             {!problem && (
               <section className="border-t border-line pt-4">

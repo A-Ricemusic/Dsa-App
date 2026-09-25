@@ -12,18 +12,21 @@ export function AttemptForm({
   problemId,
   attempt,
   initialNotes = "",
+  initialReviewDate,
 }: {
   open: boolean;
   onClose: () => void;
   problemId: ProblemId;
   attempt?: Attempt;
   initialNotes?: string;
+  initialReviewDate?: string;
 }) {
   const createAttempt = useMutation(api.attempts.create);
   const updateAttempt = useMutation(api.attempts.update);
   const [attemptedAt, setAttemptedAt] = useState(dateInputValue());
   const [grade, setGrade] = useState<Grade>("B");
   const [shouldReviewAgain, setShouldReviewAgain] = useState(false);
+  const [reviewDate, setReviewDate] = useState<string>();
   const [notes, setNotes] = useState("");
   const formKey = `attempt:${problemId}:${attempt?._id ?? "new"}`;
   const request = useFormRequest<{
@@ -31,6 +34,7 @@ export function AttemptForm({
     grade: Grade;
     shouldReviewAgain: boolean;
     notes: string;
+    reviewDate?: string;
   }>(formKey);
   const saving = request.pending;
   const session = useRef(0);
@@ -58,6 +62,7 @@ export function AttemptForm({
     setAttemptedAt(draft?.attemptedAt ?? dateInputValue(attempt?.attemptedAt));
     setGrade(draft?.grade ?? attempt?.grade ?? "B");
     setShouldReviewAgain(draft?.shouldReviewAgain ?? attempt?.shouldReviewAgain ?? false);
+    setReviewDate(draft?.reviewDate);
     setNotes(draft?.notes ?? attempt?.notes ?? initialNotes);
     if (request.state?.status === "success") request.clear();
   }, [attempt, initialNotes, open, formKey, request]);
@@ -66,8 +71,12 @@ export function AttemptForm({
     event.preventDefault();
     if (saving) return;
     const currentSession = session.current;
-    const draft = { attemptedAt, grade, shouldReviewAgain, notes };
-    const values = { ...draft, attemptedAt: inputDateTimestamp(attemptedAt) };
+    const draft = { attemptedAt, grade, shouldReviewAgain, notes, reviewDate };
+    const values = {
+      ...draft,
+      attemptedAt: inputDateTimestamp(attemptedAt),
+      reviewDate: reviewDate === undefined ? undefined : reviewDate || null,
+    };
     const completed = await request.run(draft, () =>
       attempt
         ? updateAttempt({ attemptId: attempt._id, ...values })
@@ -128,6 +137,17 @@ export function AttemptForm({
               label="Review this again"
               description="Your latest attempt sets the problem’s review status."
             />
+
+            <label className="field">
+              <span>Review date</span>
+              <input
+                type="date"
+                max="9999-12-31"
+                value={reviewDate ?? initialReviewDate ?? ""}
+                onChange={(event) => setReviewDate(event.target.value)}
+              />
+              <small>Optional. Saved with this attempt to the problem’s calendar.</small>
+            </label>
 
             <label className="field">
               <span>Attempt notes</span>

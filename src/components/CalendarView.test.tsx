@@ -55,7 +55,8 @@ it("schedules a searched problem on the selected day", async () => {
   // Search result plus the backlog's open-problem button.
   fireEvent.click(screen.getAllByRole("button", { name: "Coin Change" })[0]!);
   expect(screen.getByLabelText("Review date")).toHaveValue(today);
-  fireEvent.click(screen.getByRole("button", { name: "Save date" }));
+  expect(save).not.toHaveBeenCalled();
+  fireEvent.blur(screen.getByLabelText("Review date"));
   expect(await screen.findByRole("status")).toHaveTextContent("Review scheduled.");
   expect(save).toHaveBeenCalledWith({ problemId: backlog._id, reviewDate: today });
 });
@@ -63,12 +64,11 @@ it("schedules a searched problem on the selected day", async () => {
 it("reschedules and clears a scheduled review, preserving errors for retry", async () => {
   render(<CalendarView problems={[scheduled]} onOpenProblem={vi.fn<() => void>()} />);
   fireEvent.click(screen.getByRole("button", { name: reviewDateLabel(today) }));
-  fireEvent.change(screen.getByLabelText("Review date"), { target: { value: "2028-02-29" } });
   save.mockRejectedValueOnce(new Error("Connection failed"));
-  fireEvent.click(screen.getByRole("button", { name: "Save date" }));
+  fireEvent.change(screen.getByLabelText("Review date"), { target: { value: "2028-02-29" } });
   expect(await screen.findByRole("alert")).toHaveTextContent("Connection failed");
   expect(screen.getByLabelText("Review date")).toHaveValue("2028-02-29");
-  fireEvent.click(screen.getByRole("button", { name: "Save date" }));
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(await screen.findByRole("status")).toHaveTextContent("Review scheduled.");
   expect(save).toHaveBeenLastCalledWith({ problemId: scheduled._id, reviewDate: "2028-02-29" });
   fireEvent.click(screen.getByRole("button", { name: "Clear date" }));

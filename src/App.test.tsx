@@ -186,6 +186,6 @@ it("opens the calendar from navigation and schedules from a problem detail", asy
   await user.click(screen.getByRole("button", { name: "Practice 1" }));
   expect(window.location.pathname).toBe("/problems/problem-0");
   fireEvent.change(screen.getByLabelText("Review date"), { target: { value: "2028-02-29" } });
-  await user.click(screen.getByRole("button", { name: "Save date" }));
+  await screen.findByText("Review scheduled.");
   expect(mocks.mutation).toHaveBeenCalledWith({ problemId: "problem-0", reviewDate: "2028-02-29" });
 });

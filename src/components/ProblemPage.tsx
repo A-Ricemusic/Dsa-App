@@ -132,7 +132,7 @@ export function ProblemPage({
           Choose a day on your calendar. After practicing, clear the date or schedule your next
           review.
         </p>
-        <ReviewDateForm key={`${problem._id}:${problem.reviewDate}`} problem={problem} />
+        <ReviewDateForm key={problem._id} problem={problem} />
       </section>
 
       <section className="mt-6">
@@ -205,6 +205,7 @@ export function ProblemPage({
         open={attemptFormOpen}
         onClose={() => setAttemptFormOpen(false)}
         problemId={problem._id}
+        initialReviewDate={problem.reviewDate}
       />
     </div>
   );

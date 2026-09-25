@@ -119,9 +119,13 @@ bun run preview    # Test the built frontend with the same auth handler locally
 Open **Calendar** to see scheduled review counts by day, a selected day's problem
 list, overdue reviews, and problems marked “review again” that still need a date.
 Search for any problem on the calendar, or open its detail page, to set, change,
-or clear its next review date.
+or clear its next review date. Date changes save automatically; a failed save
+shows a retry action. The add/edit problem and log/edit attempt modals also
+include an optional review date, saved together with the form. Cancelling a
+modal leaves the schedule unchanged.
 
 Each problem has one next review date, stored as a calendar day (YYYY-MM-DD) so
 time-zone changes do not move it. Dates persist until you reschedule or clear
-them; logging or editing an attempt does not silently remove a scheduled review.
+them; logging or editing an attempt leaves the schedule unchanged unless you
+edit its review date.
 The existing “review again” flag continues to describe the latest attempt.

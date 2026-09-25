@@ -154,6 +154,7 @@ export function AttemptPage({
         open={editing}
         onClose={() => setEditing(false)}
         problemId={problem._id}
+        initialReviewDate={problem.reviewDate}
         attempt={attempt}
         initialNotes={notes}
       />

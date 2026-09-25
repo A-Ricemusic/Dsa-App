@@ -231,3 +231,84 @@ describe("review scheduling", () => {
     ).rejects.toThrow("valid review date");
   });
 });
+
+it("creates a problem and its optional first attempt with a review date atomically", async () => {
+  const { alice } = createTestContext();
+  const firstAttempt = {
+    attemptedAt: Date.UTC(2026, 8, 1),
+    grade: "B" as const,
+    shouldReviewAgain: true,
+    notes: "Review later",
+  };
+  for (const includeAttempt of [true, false]) {
+    const problemId = await alice.mutation(api.problems.create, {
+      ...baseProblem,
+      reviewDate: "2028-02-29",
+      ...(includeAttempt ? { firstAttempt } : {}),
+    });
+    expect((await alice.query(api.problems.list)).find((p) => p._id === problemId)).toMatchObject({
+      reviewDate: "2028-02-29",
+      attemptCount: includeAttempt ? 1 : 0,
+    });
+  }
+  const before = await alice.query(api.problems.list);
+  await expect(
+    alice.mutation(api.problems.create, { ...baseProblem, firstAttempt, reviewDate: "2026-02-29" }),
+  ).rejects.toThrow("valid review date");
+  expect(await alice.query(api.problems.list)).toEqual(before);
+});
+
+it("updates the problem date from attempts without changing it when omitted", async () => {
+  const { alice, bob } = createTestContext();
+  const problemId = await alice.mutation(api.problems.create, {
+    ...baseProblem,
+    reviewDate: "2026-10-01",
+  });
+  const values = {
+    attemptedAt: Date.UTC(2026, 8, 1),
+    grade: "B" as const,
+    shouldReviewAgain: true,
+    notes: "",
+  };
+  const attemptId = await alice.mutation(api.attempts.create, {
+    problemId,
+    ...values,
+    reviewDate: "2026-10-02",
+  });
+  expect((await alice.query(api.problems.list))[0]?.reviewDate).toBe("2026-10-02");
+  await alice.mutation(api.attempts.update, { attemptId, ...values });
+  expect((await alice.query(api.problems.list))[0]?.reviewDate).toBe("2026-10-02");
+  await expect(
+    bob.mutation(api.attempts.update, { attemptId, ...values, reviewDate: null }),
+  ).rejects.toThrow("Attempt not found");
+  await expect(
+    bob.mutation(api.attempts.create, { problemId, ...values, reviewDate: "2026-10-03" }),
+  ).rejects.toThrow("Problem not found");
+  await expect(
+    alice.mutation(api.attempts.create, { problemId, ...values, reviewDate: "bad-date" }),
+  ).rejects.toThrow("valid review date");
+  await expect(
+    alice.mutation(api.attempts.update, {
+      attemptId,
+      ...values,
+      notes: "Must roll back",
+      reviewDate: "bad-date",
+    }),
+  ).rejects.toThrow("valid review date");
+  expect(await alice.query(api.attempts.listForProblem, { problemId })).toMatchObject([
+    { notes: "" },
+  ]);
+  expect((await alice.query(api.problems.list))[0]).toMatchObject({
+    reviewDate: "2026-10-02",
+    attemptCount: 1,
+  });
+  await alice.mutation(api.attempts.update, { attemptId, ...values, reviewDate: null });
+  expect((await alice.query(api.problems.list))[0]?.reviewDate).toBeUndefined();
+  await alice.mutation(api.problems.update, {
+    ...baseProblem,
+    problemId,
+    reviewDate: "2026-10-04",
+  });
+  await alice.mutation(api.problems.update, { ...baseProblem, problemId });
+  expect((await alice.query(api.problems.list))[0]?.reviewDate).toBe("2026-10-04");
+});

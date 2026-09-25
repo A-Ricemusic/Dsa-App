@@ -7,6 +7,7 @@ import { requireOwnerId } from "./lib/auth";
 import { cleanAttemptInput } from "./lib/attempts";
 import { attemptInputValidator, gradeValidator } from "./lib/validators";
 import schema from "./schema";
+import { cleanReviewDate } from "./lib/reviewDate";
 
 async function requireProblem(ctx: MutationCtx, ownerId: string, problemId: Id<"problems">) {
   const problem = await ctx.db.get(problemId);
@@ -56,6 +57,7 @@ export const create = mutation({
   args: {
     problemId: v.id("problems"),
     ...attemptInputValidator.fields,
+    reviewDate: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.id("attempts"),
   handler: async (ctx, args) => {
@@ -74,6 +76,9 @@ export const create = mutation({
       updatedAt: now,
     });
     await refreshLatestAttempt(ctx, args.problemId, problem.attemptCount + 1);
+    if (args.reviewDate !== undefined) {
+      await ctx.db.patch(args.problemId, { reviewDate: cleanReviewDate(args.reviewDate) });
+    }
     return attemptId;
   },
 });
@@ -82,6 +87,7 @@ export const update = mutation({
   args: {
     attemptId: v.id("attempts"),
     ...attemptInputValidator.fields,
+    reviewDate: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -100,6 +106,9 @@ export const update = mutation({
       updatedAt: Date.now(),
     });
     await refreshLatestAttempt(ctx, attempt.problemId, problem.attemptCount);
+    if (args.reviewDate !== undefined) {
+      await ctx.db.patch(attempt.problemId, { reviewDate: cleanReviewDate(args.reviewDate) });
+    }
     return null;
   },
 });

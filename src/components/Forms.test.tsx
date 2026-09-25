@@ -271,3 +271,62 @@ it("shows a recovery action when a journal query throws", () => {
 function BrokenQuery(): never {
   throw new Error("Query failed");
 }
+
+it.each([true, false])(
+  "includes the review date when adding a problem (with attempt: %s)",
+  async (includeAttempt) => {
+    const user = userEvent.setup();
+    render(<ProblemForm open onClose={vi.fn<() => void>()} categories={[]} />);
+    fireEvent.change(screen.getByLabelText("Problem name"), {
+      target: { value: "Scheduled problem" },
+    });
+    fireEvent.change(screen.getByLabelText("Problem link"), {
+      target: { value: "https://example.com/scheduled" },
+    });
+    if (!includeAttempt)
+      await user.click(screen.getByRole("checkbox", { name: /I attempted this problem/ }));
+    fireEvent.change(screen.getByLabelText(/Review date/), { target: { value: "2026-10-02" } });
+    expect(mocks.mutation).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Add problem" }));
+    expect(mocks.mutation).toHaveBeenCalledWith(
+      expect.objectContaining({ reviewDate: "2026-10-02" }),
+    );
+  },
+);
+
+it("preserves an existing schedule when logging without editing the date", async () => {
+  const user = userEvent.setup();
+  render(
+    <AttemptForm
+      open
+      onClose={vi.fn<() => void>()}
+      problemId={makeProblem()._id}
+      initialReviewDate="2026-10-01"
+    />,
+  );
+  expect(screen.getByLabelText(/Review date/)).toHaveValue("2026-10-01");
+  await user.click(screen.getByRole("button", { name: "Log attempt" }));
+  expect(mocks.mutation).toHaveBeenCalledWith(expect.objectContaining({ reviewDate: undefined }));
+});
+
+it("saves a chosen date with the attempt, but not when cancelling", async () => {
+  const user = userEvent.setup();
+  const props = {
+    open: true,
+    onClose: vi.fn<() => void>(),
+    problemId: makeProblem()._id,
+    initialReviewDate: "2026-10-01",
+  };
+  const view = render(<AttemptForm {...props} />);
+  fireEvent.change(screen.getByLabelText(/Review date/), { target: { value: "2026-10-03" } });
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(mocks.mutation).not.toHaveBeenCalled();
+  view.rerender(<AttemptForm {...props} open={false} />);
+  view.rerender(<AttemptForm {...props} />);
+  expect(screen.getByLabelText(/Review date/)).toHaveValue("2026-10-01");
+  fireEvent.change(screen.getByLabelText(/Review date/), { target: { value: "2026-10-03" } });
+  await user.click(screen.getByRole("button", { name: "Log attempt" }));
+  expect(mocks.mutation).toHaveBeenCalledWith(
+    expect.objectContaining({ reviewDate: "2026-10-03" }),
+  );
+});
