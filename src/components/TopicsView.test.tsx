@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { makeCategory, makeProblem } from "../test/factories";
+import { makeAttempt, makeCategory, makeProblem } from "../test/factories";
+import type { Attempt } from "../lib/types";
 import { TopicsView } from "./TopicsView";
 
 const mocks = vi.hoisted(() => ({
-  query: vi.fn<() => Promise<{ page: never[]; isDone: boolean; continueCursor: string }>>(),
+  query: vi.fn<() => Promise<{ page: Attempt[]; isDone: boolean; continueCursor: string }>>(),
 }));
 vi.mock("convex/react", () => ({ useConvex: () => ({ query: mocks.query }) }));
 
@@ -15,7 +16,7 @@ afterEach(() => {
 });
 
 it("renders unpracticed topics, latest averages, and downloads the complete CSV", async () => {
-  mocks.query.mockResolvedValue({ page: [], isDone: true, continueCursor: "" });
+  mocks.query.mockResolvedValue({ page: [makeAttempt(3)], isDone: true, continueCursor: "" });
   const dfs = makeCategory("Depth-first search");
   const bfs = makeCategory("Breadth-first search");
   const createObjectURL = vi.fn<() => string>().mockReturnValue("blob:topics");
@@ -74,7 +75,7 @@ it("loads only on export, prevents duplicate requests, and permits retry after f
   expect(mocks.query).toHaveBeenCalledOnce();
   expect(mocks.query).toHaveBeenCalledWith(expect.anything(), {
     problemId: "problem-default",
-    paginationOpts: { cursor: null, numItems: 5 },
+    paginationOpts: { cursor: null, numItems: 100 },
   });
   await act(async () => {
     rejectRequest(new Error("Offline"));
@@ -87,4 +88,85 @@ it("loads only on export, prevents duplicate requests, and permits retry after f
     fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
   });
   expect(mocks.query).toHaveBeenCalledTimes(2);
+});
+
+it("offers export ranges, validates custom dates, and reports when none match", async () => {
+  mocks.query.mockResolvedValue({ page: [], isDone: true, continueCursor: "" });
+  render(<TopicsView categories={[]} problems={[makeProblem({ attemptCount: 1 })]} />);
+  const range = screen.getByRole("combobox", { name: "CSV date range" });
+  expect(
+    within(range)
+      .getAllByRole("option")
+      .map((option) => option.textContent),
+  ).toEqual(["All time", "Past 30 days", "Past 365 days", "Custom dates"]);
+  fireEvent.change(range, { target: { value: "custom" } });
+  fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Choose a valid start and end date");
+  expect(mocks.query).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-09-01" } });
+  fireEvent.change(screen.getByLabelText("Through"), { target: { value: "2026-09-24" } });
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  });
+  expect(screen.getByRole("alert")).toHaveTextContent("No attempts in this date range");
+});
+
+it("downloads the selected period with matching category totals and five notes columns per problem", async () => {
+  const category = makeCategory("DFS");
+  mocks.query.mockResolvedValue({
+    page: [
+      {
+        ...makeAttempt(9, "Outside the range"),
+        attemptedAt: +new Date(2026, 8, 9, 12),
+        grade: "A",
+      },
+      { ...makeAttempt(7, "Review recursion"), attemptedAt: +new Date(2026, 8, 7, 12), grade: "F" },
+      { ...makeAttempt(6, "Check the base case"), attemptedAt: +new Date(2026, 8, 6, 12) },
+      { ...makeAttempt(1, "Old notes"), attemptedAt: +new Date(2026, 8, 1, 12) },
+    ],
+    isDone: true,
+    continueCursor: "",
+  });
+  const createObjectURL = vi.fn<(blob: Blob) => string>().mockReturnValue("blob:topics");
+  vi.stubGlobal("URL", { createObjectURL, revokeObjectURL: vi.fn<() => void>() });
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  render(
+    <TopicsView
+      categories={[category]}
+      problems={[
+        makeProblem({
+          name: "Tree traversal",
+          categories: [category],
+          categoryIds: [category._id],
+          attemptCount: 4,
+          latestGrade: "A",
+        }),
+      ]}
+    />,
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "CSV date range" }), {
+    target: { value: "custom" },
+  });
+  fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-09-06" } });
+  fireEvent.change(screen.getByLabelText("Through"), { target: { value: "2026-09-07" } });
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  });
+  const blob = createObjectURL.mock.calls[0]![0];
+  const csv = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result)), { once: true });
+    reader.addEventListener("error", () => reject(reader.error), { once: true });
+    reader.readAsText(blob);
+  });
+  expect(csv).toContain('"DFS","1","2","0.00"');
+  expect(csv).toContain(
+    '"Tree traversal","https://leetcode.com/problems/default-problem/","medium","DFS","F","2","F","Yes","Review recursion","C","Yes","Check the base case","NA","NA","NA"',
+  );
+  expect(csv.match(/"Tree traversal"/g)).toHaveLength(1);
+  for (let index = 1; index <= 5; index++) expect(csv).toContain(`"Attempt notes ${index}"`);
+  expect(csv).not.toContain("Outside the range");
+  expect(csv).not.toContain("Old notes");
+  expect(csv).not.toContain("Problem ID");
+  expect(csv).not.toContain("Record type");
 });

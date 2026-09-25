@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { loadExportAttempts } from "../lib/attemptExport";
+import { exportRange, loadExportAttempts, type ExportPeriod } from "../lib/attemptExport";
 import { Download } from "lucide-react";
 import type { Category, ProblemWithCategories } from "../lib/types";
 import { buildTopicStats, downloadTopicsCsv, topicFocus } from "../lib/topicStats";
@@ -19,19 +19,42 @@ export function TopicsView({
   const exportingRef = useRef(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [period, setPeriod] = useState<ExportPeriod>("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const exportCsv = async () => {
     if (exportingRef.current) return;
+    let range;
+    try {
+      range = exportRange(period, from, to);
+    } catch {
+      setExportError("Choose a valid start and end date.");
+      return;
+    }
     exportingRef.current = true;
     setExporting(true);
     setExportError("");
     try {
-      const histories = await loadExportAttempts(problems, (problemId, cursor, numItems) =>
-        convex.query(api.attempts.listForProblemPage, {
-          problemId,
-          paginationOpts: { cursor, numItems },
-        }),
+      const histories = await loadExportAttempts(
+        problems,
+        (problemId, cursor, numItems) =>
+          convex.query(api.attempts.listForProblemPage, {
+            problemId,
+            paginationOpts: { cursor, numItems },
+          }),
+        range,
       );
-      downloadTopicsCsv(topics, histories);
+      if (!histories.length) {
+        setExportError("No attempts in this date range. Choose another range.");
+        return;
+      }
+      downloadTopicsCsv(
+        buildTopicStats(
+          categories,
+          histories.map(({ problem }) => problem),
+        ),
+        histories,
+      );
     } catch {
       setExportError("Couldn’t load attempt history or export the CSV. Please try again.");
     } finally {
@@ -54,6 +77,46 @@ export function TopicsView({
             Your all-time practice by topic, using your assigned categories.
           </p>
         </div>
+      </div>
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="field">
+          <span>CSV date range</span>
+          <select
+            value={period}
+            disabled={exporting}
+            onChange={(event) => {
+              setPeriod(event.target.value as ExportPeriod);
+              setExportError("");
+            }}
+          >
+            <option value="all">All time</option>
+            <option value="month">Past 30 days</option>
+            <option value="year">Past 365 days</option>
+            <option value="custom">Custom dates</option>
+          </select>
+        </label>
+        {period === "custom" && (
+          <>
+            <label className="field">
+              <span>From</span>
+              <input
+                type="date"
+                value={from}
+                disabled={exporting}
+                onChange={(event) => setFrom(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Through</span>
+              <input
+                type="date"
+                value={to}
+                disabled={exporting}
+                onChange={(event) => setTo(event.target.value)}
+              />
+            </label>
+          </>
+        )}
         <button
           className="button-primary"
           disabled={!topics.length || exporting}
@@ -63,6 +126,12 @@ export function TopicsView({
           {exporting ? "Preparing CSV…" : "Export CSV"}
         </button>
       </div>
+      <p className="mt-3 text-xs leading-5 text-muted">
+        The CSV range applies to both category summaries and problem rows. Counts include all
+        attempts in the range; grades use each problem’s latest attempt in that range. Notes 1–5
+        show the five newest attempts in the range, newest first. Missing notes are NA. The overview
+        below remains all-time.
+      </p>
       {exportError && (
         <p role="alert" className="form-error">
           {exportError}
@@ -70,7 +139,7 @@ export function TopicsView({
       )}
       {exporting && (
         <p role="status" className="text-sm text-muted">
-          Loading the latest five attempts per problem…
+          Loading practice history for the selected range…
         </p>
       )}
       <dl className="stats-strip">
@@ -172,10 +241,9 @@ export function TopicsView({
               </table>
             </div>
             <p className="mt-4 text-xs leading-5 text-muted">
-              Export includes topic summaries and the latest five attempts per problem, with dates,
-              grades, review flags, and full notes. Attempt 1 is the newest; missing attempts are
-              NA. Share the CSV with your LLM coach to plan a practice session. Add topic categories
-              to uncategorized questions for a more useful breakdown.
+              Export starts with category counts and average grades, followed by one row per
+              practiced problem with its grade and Attempt notes 1 through Attempt notes 5. Share
+              the CSV with your LLM coach to plan a practice session.
             </p>
           </section>
         </>
