@@ -95,8 +95,12 @@ it("allows dismissal during a pending save, retains the draft after remount, and
   fireEvent.submit(screen.getByRole("button", { name: "Log attempt" }).closest("form")!);
   fireEvent.submit(screen.getByRole("button", { name: "Saving…" }).closest("form")!);
   expect(mocks.mutation).toHaveBeenCalledOnce();
-  expect(screen.getByRole("button", { name: "Close dialog" })).toBeEnabled();
-  fireEvent(screen.getByRole("dialog"), new Event("cancel", { bubbles: true, cancelable: true }));
+  expect(screen.queryByRole("button", { name: "Close dialog" })).not.toBeInTheDocument();
+  const cancel = new Event("cancel", { bubbles: true, cancelable: true });
+  fireEvent(screen.getByRole("dialog"), cancel);
+  expect(cancel.defaultPrevented).toBe(true);
+  expect(onClose).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Close" }));
   expect(onClose).toHaveBeenCalledOnce();
   first.unmount();
   const second = render(<AttemptForm {...props} />);
@@ -194,7 +198,7 @@ it("does not navigate or close a different editor when a dismissed problem save 
   await user.type(screen.getByLabelText("Problem name"), "Pending new problem");
   await user.type(screen.getByLabelText("Problem link"), "https://example.com/problem");
   await user.click(screen.getByRole("button", { name: "Add problem" }));
-  await user.click(screen.getByRole("button", { name: "Close dialog" }));
+  await user.click(screen.getByRole("button", { name: "Close" }));
   view.rerender(<ProblemForm {...props} open={false} />);
   const problem = makeProblem({ _id: "another-problem" as Attempt["problemId"] });
   view.rerender(<ProblemForm {...props} problem={problem} />);

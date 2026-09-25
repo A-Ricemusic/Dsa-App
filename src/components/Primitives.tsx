@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { BookOpen, Check, X } from "lucide-react";
+import { BookOpen, Check } from "lucide-react";
 import type { Difficulty, Grade } from "../lib/types";
 
 export function Modal({
@@ -37,7 +37,7 @@ export function Modal({
   return (
     <dialog
       ref={dialogRef}
-      closedby="any"
+      closedby="none"
       onClose={(event) => {
         if (!event.currentTarget.open) onClose();
       }}
@@ -45,7 +45,6 @@ export function Modal({
       className={`form-dialog ${width}`}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
       }}
     >
       <div className="bg-surface">
@@ -56,9 +55,6 @@ export function Modal({
               {title}
             </h2>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close dialog">
-            <X size={18} />
-          </button>
         </div>
         {children}
       </div>
