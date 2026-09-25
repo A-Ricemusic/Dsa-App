@@ -1,4 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useConvex } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { loadExportAttempts } from "../lib/attemptExport";
 import { Download } from "lucide-react";
 import type { Category, ProblemWithCategories } from "../lib/types";
 import { buildTopicStats, downloadTopicsCsv, topicFocus } from "../lib/topicStats";
@@ -12,6 +15,30 @@ export function TopicsView({
   problems: ProblemWithCategories[];
 }) {
   const topics = useMemo(() => buildTopicStats(categories, problems), [categories, problems]);
+  const convex = useConvex();
+  const exportingRef = useRef(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const exportCsv = async () => {
+    if (exportingRef.current) return;
+    exportingRef.current = true;
+    setExporting(true);
+    setExportError("");
+    try {
+      const histories = await loadExportAttempts(problems, (problemId, cursor, numItems) =>
+        convex.query(api.attempts.listForProblemPage, {
+          problemId,
+          paginationOpts: { cursor, numItems },
+        }),
+      );
+      downloadTopicsCsv(topics, histories);
+    } catch {
+      setExportError("Couldn’t load attempt history or export the CSV. Please try again.");
+    } finally {
+      exportingRef.current = false;
+      setExporting(false);
+    }
+  };
   const practiced = topics.filter((topic) => topic.attempted > 0);
   const weak = topics.filter((topic) => topic.average !== null && topic.average < 2.5);
   const suggestions = topics
@@ -29,13 +56,23 @@ export function TopicsView({
         </div>
         <button
           className="button-primary"
-          disabled={!topics.length}
-          onClick={() => downloadTopicsCsv(topics)}
+          disabled={!topics.length || exporting}
+          onClick={() => void exportCsv()}
         >
           <Download size={16} />
-          Export CSV
+          {exporting ? "Preparing CSV…" : "Export CSV"}
         </button>
       </div>
+      {exportError && (
+        <p role="alert" className="form-error">
+          {exportError}
+        </p>
+      )}
+      {exporting && (
+        <p role="status" className="text-sm text-muted">
+          Loading the latest five attempts per problem…
+        </p>
+      )}
       <dl className="stats-strip">
         <div>
           <dt>Topics practiced</dt>
@@ -135,9 +172,10 @@ export function TopicsView({
               </table>
             </div>
             <p className="mt-4 text-xs leading-5 text-muted">
-              Export includes every topic, counts, averages, focus labels, and grading rules. Share
-              the CSV with your LLM coach to plan a practice session. Add topic categories to
-              uncategorized questions for a more useful breakdown.
+              Export includes topic summaries and the latest five attempts per problem, with dates,
+              grades, review flags, and full notes. Attempt 1 is the newest; missing attempts are
+              NA. Share the CSV with your LLM coach to plan a practice session. Add topic categories
+              to uncategorized questions for a more useful breakdown.
             </p>
           </section>
         </>

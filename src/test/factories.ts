@@ -1,4 +1,11 @@
-import type { Category, CategoryId, ProblemId, ProblemWithCategories } from "../lib/types";
+import type {
+  Attempt,
+  AttemptId,
+  Category,
+  CategoryId,
+  ProblemId,
+  ProblemWithCategories,
+} from "../lib/types";
 
 export function makeCategory(name: string, id = name.toLocaleLowerCase().replaceAll(" ", "-")) {
   return {
@@ -27,5 +34,20 @@ export function makeProblem(overrides: Partial<ProblemWithCategories> = {}): Pro
     categoryIds: [],
     categories: [],
     ...overrides,
+  };
+}
+
+export function makeAttempt(index: number, notes = `Notes ${index}`): Attempt {
+  return {
+    _id: `attempt-${index}` as AttemptId,
+    _creationTime: index,
+    ownerId: "test-user",
+    problemId: "problem-default" as ProblemId,
+    attemptedAt: Date.UTC(2026, 8, index),
+    grade: "C",
+    shouldReviewAgain: true,
+    notes,
+    createdAt: index,
+    updatedAt: index,
   };
 }
