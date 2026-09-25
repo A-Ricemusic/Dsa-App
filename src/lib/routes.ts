@@ -5,12 +5,14 @@ export type AppRoute =
   | { kind: "problems" }
   | { kind: "categories" }
   | { kind: "topics" }
+  | { kind: "calendar" }
   | { kind: "problem"; problemId: ProblemId }
   | { kind: "attempt"; problemId: ProblemId; attemptId: AttemptId }
   | { kind: "not-found" };
 
 export function routeFromPath(pathname: string): AppRoute {
   const parts = pathname.split("/").filter(Boolean);
+  if (parts.length === 1 && parts[0] === "calendar") return { kind: "calendar" };
   if (parts.length === 0) return { kind: "dashboard" };
   if (parts.length === 1 && parts[0] === "problems") return { kind: "problems" };
   if (parts.length === 1 && parts[0] === "topics") return { kind: "topics" };

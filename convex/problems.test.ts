@@ -175,3 +175,59 @@ describe("problems and attempts", () => {
     expect(children).toEqual({ attempts: [], assignments: [] });
   });
 });
+
+describe("review scheduling", () => {
+  it("schedules, reschedules and clears dates independently of attempt history", async () => {
+    const { alice, bob } = createTestContext();
+    const problemId = await alice.mutation(api.problems.create, baseProblem);
+    for (const reviewDate of ["2028-02-29", "2028-03-02"]) {
+      await alice.mutation(api.problems.setReviewDate, { problemId, reviewDate });
+      expect((await alice.query(api.problems.list))[0]).toMatchObject({
+        reviewDate,
+        attemptCount: 0,
+        latestShouldReview: false,
+      });
+    }
+    expect(await bob.query(api.problems.list)).toEqual([]);
+    await alice.mutation(api.attempts.create, {
+      problemId,
+      attemptedAt: Date.UTC(2026, 8, 1),
+      grade: "B",
+      shouldReviewAgain: true,
+      notes: "Practice again",
+    });
+    expect((await alice.query(api.problems.list))[0]?.reviewDate).toBe("2028-03-02");
+    await alice.mutation(api.problems.setReviewDate, { problemId, reviewDate: null });
+    expect((await alice.query(api.problems.list))[0]).toMatchObject({ latestShouldReview: true });
+    expect((await alice.query(api.problems.list))[0]?.reviewDate).toBeUndefined();
+  });
+
+  it("rejects unauthenticated and cross-owner scheduling and clearing", async () => {
+    const { t, alice, bob } = createTestContext();
+    const problemId = await alice.mutation(api.problems.create, baseProblem);
+    for (const reviewDate of ["2026-10-01", null]) {
+      await expect(
+        t.mutation(api.problems.setReviewDate, { problemId, reviewDate }),
+      ).rejects.toThrow("signed in");
+      await expect(
+        bob.mutation(api.problems.setReviewDate, { problemId, reviewDate }),
+      ).rejects.toThrow("Problem not found");
+    }
+  });
+
+  it.each([
+    "",
+    "2026-02-29",
+    "2026-04-31",
+    "2026-13-01",
+    "2026-1-01",
+    "tomorrow",
+    "2026-10-01T00:00:00Z",
+  ])("rejects invalid date %s", async (reviewDate) => {
+    const { alice } = createTestContext();
+    const problemId = await alice.mutation(api.problems.create, baseProblem);
+    await expect(
+      alice.mutation(api.problems.setReviewDate, { problemId, reviewDate }),
+    ).rejects.toThrow("valid review date");
+  });
+});

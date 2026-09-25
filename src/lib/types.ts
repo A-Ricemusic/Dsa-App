@@ -13,7 +13,7 @@ export const DIFFICULTIES = [
   "hard+",
 ] as const satisfies readonly Difficulty[];
 export type Grade = "A" | "B" | "C" | "D" | "F";
-export type View = "dashboard" | "problems" | "categories" | "topics";
+export type View = "dashboard" | "problems" | "categories" | "topics" | "calendar";
 export type SortKey = "recent" | "grade" | "attempts" | "name";
 
 export type Problem = Doc<"problems">;

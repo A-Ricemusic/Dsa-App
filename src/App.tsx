@@ -9,6 +9,7 @@ import type { ProblemId, ProblemWithCategories, View } from "./lib/types";
 import { AttemptPage } from "./components/AttemptPage";
 import { CategoriesView } from "./components/CategoriesView";
 import { TopicsView } from "./components/TopicsView";
+import { CalendarView } from "./components/CalendarView";
 import { Dashboard } from "./components/Dashboard";
 import { ProblemForm } from "./components/ProblemForm";
 import { ProblemPage } from "./components/ProblemPage";
@@ -147,13 +148,15 @@ function Tracker({
   };
 
   const activeView: View =
-    route.kind === "dashboard"
-      ? "dashboard"
-      : route.kind === "topics"
-        ? "topics"
-        : route.kind === "categories"
-          ? "categories"
-          : "problems";
+    route.kind === "calendar"
+      ? "calendar"
+      : route.kind === "dashboard"
+        ? "dashboard"
+        : route.kind === "topics"
+          ? "topics"
+          : route.kind === "categories"
+            ? "categories"
+            : "problems";
 
   const changeView = (view: View) => {
     setReviewOnly(false);
@@ -182,6 +185,15 @@ function Tracker({
             setReviewOnly(onlyReview);
             navigate("/problems");
           }}
+        />
+      );
+    }
+
+    if (route.kind === "calendar") {
+      return (
+        <CalendarView
+          problems={problems}
+          onOpenProblem={(problem) => navigate(`/problems/${problem._id}`)}
         />
       );
     }

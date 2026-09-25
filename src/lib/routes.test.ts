@@ -6,6 +6,8 @@ it.each([
   ["/problems", "problems"],
   ["/categories", "categories"],
   ["/topics", "topics"],
+  ["/calendar", "calendar"],
+  ["/calendar/extra", "not-found"],
   ["/topics/extra", "not-found"],
   ["/problems/example", "problem"],
   ["/problems/example/attempts/example", "attempt"],

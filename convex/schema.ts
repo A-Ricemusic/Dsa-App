@@ -34,6 +34,7 @@ export default defineSchema({
     latestAttemptAt: v.optional(v.number()),
     latestGrade: v.optional(grade),
     latestShouldReview: v.boolean(),
+    reviewDate: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

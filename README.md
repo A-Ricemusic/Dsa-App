@@ -113,3 +113,15 @@ bun run typecheck  # Strict TypeScript check
 bun run build      # Production build
 bun run preview    # Test the built frontend with the same auth handler locally
 ```
+
+## Review calendar
+
+Open **Calendar** to see scheduled review counts by day, a selected day's problem
+list, overdue reviews, and problems marked “review again” that still need a date.
+Search for any problem on the calendar, or open its detail page, to set, change,
+or clear its next review date.
+
+Each problem has one next review date, stored as a calendar day (YYYY-MM-DD) so
+time-zone changes do not move it. Dates persist until you reschedule or clear
+them; logging or editing an attempt does not silently remove a scheduled review.
+The existing “review again” flag continues to describe the latest attempt.
