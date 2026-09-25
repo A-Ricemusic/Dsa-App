@@ -230,3 +230,29 @@ export const listCategoryAssignmentsPage = query({
       .paginate(args.paginationOpts);
   },
 });
+
+// A calendar date, rather than an instant, stays on the same day in every time zone.
+export const setReviewDate = mutation({
+  args: { problemId: v.id("problems"), reviewDate: v.union(v.string(), v.null()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    const problem = await ctx.db.get(args.problemId);
+    if (!problem || problem.ownerId !== ownerId) throw new ConvexError("Problem not found.");
+    if (args.reviewDate !== null) {
+      const date = new Date(args.reviewDate + "T12:00:00Z");
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(args.reviewDate) ||
+        !Number.isFinite(date.getTime()) ||
+        date.toISOString().slice(0, 10) !== args.reviewDate
+      ) {
+        throw new ConvexError("Enter a valid review date.");
+      }
+    }
+    await ctx.db.patch(args.problemId, {
+      reviewDate: args.reviewDate ?? undefined,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});

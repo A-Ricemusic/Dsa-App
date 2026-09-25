@@ -14,6 +14,7 @@ import {
 import { api } from "../../convex/_generated/api";
 import type { Attempt, ProblemWithCategories } from "../lib/types";
 import { formatDate, getErrorMessage } from "../lib/utils";
+import { ReviewDateForm } from "./ReviewDateForm";
 import { AttemptForm } from "./AttemptForm";
 import { DifficultyBadge, EmptyState, GradeBadge, Spinner } from "./Primitives";
 
@@ -124,6 +125,15 @@ export function ProblemPage({
           </div>
         )}
       </dl>
+
+      <section className="panel mt-6 p-5" aria-label="Review schedule">
+        <h2 className="mb-2 text-base">Next review</h2>
+        <p className="mb-4 text-sm text-muted">
+          Choose a day on your calendar. After practicing, clear the date or schedule your next
+          review.
+        </p>
+        <ReviewDateForm key={`${problem._id}:${problem.reviewDate}`} problem={problem} />
+      </section>
 
       <section className="mt-6">
         <div className="mb-5 flex items-end justify-between gap-4">

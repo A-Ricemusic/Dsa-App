@@ -167,3 +167,25 @@ it("opens topic insights from navigation and supports direct routes and back", a
   fireEvent.popState(window);
   expect(screen.getByRole("heading", { name: "Overview" })).toBeVisible();
 });
+
+it("opens the calendar from navigation and schedules from a problem detail", async () => {
+  const user = userEvent.setup();
+  mocks.auth.mockReturnValue(
+    authState({ user: { id: "test", email: "test@example.com", firstName: "Test" } }),
+  );
+  const app = renderApp();
+  await user.click(
+    within(screen.getByRole("navigation")).getByRole("button", { name: "Calendar" }),
+  );
+  expect(window.location.pathname).toBe("/calendar");
+  expect(screen.getByRole("heading", { name: "Review calendar" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Calendar" })).toHaveAttribute("aria-current", "page");
+  app.unmount();
+  renderApp();
+  expect(screen.getByRole("heading", { name: "Review calendar" })).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Practice 1" }));
+  expect(window.location.pathname).toBe("/problems/problem-0");
+  fireEvent.change(screen.getByLabelText("Review date"), { target: { value: "2028-02-29" } });
+  await user.click(screen.getByRole("button", { name: "Save date" }));
+  expect(mocks.mutation).toHaveBeenCalledWith({ problemId: "problem-0", reviewDate: "2028-02-29" });
+});
