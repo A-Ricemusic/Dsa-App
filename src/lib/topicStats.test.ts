@@ -68,57 +68,82 @@ it("orders weak topics, coverage gaps, reviews, and strong topics without treati
   });
 });
 
-it("exports precise scores, zero grades, missing grades, rules, timestamp, and safe quoted names", () => {
+it("exports category summary first, then one row per problem with five separate notes columns", () => {
+  const category = makeCategory("DFS");
+  const problem = makeProblem({
+    name: "Tree traversal",
+    attemptCount: 7,
+    categoryIds: [category._id],
+    categories: [category],
+    latestGrade: "C",
+  });
+  const attempts = Array.from({ length: 7 }, (_, index) => makeAttempt(7 - index));
+  const csv = topicsCsv(buildTopicStats([category], [problem]), [{ problem, attempts }]);
+  const lines = csv.trim().split("\r\n");
+  expect(lines).toHaveLength(5);
+  expect(lines[0]).toContain(
+    '"Topic","Questions attempted","Total attempts","Average latest grade (0-4)"',
+  );
+  expect(lines[1]).toContain('"DFS","1","7","2.00"');
+  expect(lines[3]).toContain(
+    '"Problem","Problem URL","Difficulty","Topics","Latest grade","Total attempts"',
+  );
+  expect(lines[4]).toContain('"Tree traversal"');
+  expect(new Set(lines.map((line) => line.split('","').length))).toEqual(new Set([21]));
+  for (let index = 1; index <= 5; index++) expect(lines[3]).toContain(`"Attempt notes ${index}"`);
+  expect(lines[4]).toContain('"Notes 7"');
+  expect(lines[4]).toContain('"Notes 3"');
+  expect(csv).not.toContain('"Notes 2"');
+  expect(csv).not.toContain('"Notes 1"');
+  for (const removed of [
+    "Record",
+    "Record type",
+    "Problem ID",
+    "Attempt ID",
+    "Attempt date (UTC)",
+    "Exported at (UTC)",
+    "Methodology",
+  ])
+    expect(csv).not.toContain(`"${removed}"`);
+});
+
+it("preserves full multiline notes and pads missing attempts in the same problem row", () => {
+  const problem = makeProblem({ attemptCount: 3 });
+  const csv = topicsCsv(
+    [],
+    [
+      {
+        problem,
+        attempts: [
+          makeAttempt(3, 'Used "DFS", then BFS\nReview recursion → stack'),
+          makeAttempt(2, "=unsafe formula"),
+          makeAttempt(1, ""),
+        ],
+      },
+    ],
+  );
+  expect(csv).toContain('"Used ""DFS"", then BFS\nReview recursion → stack"');
+  expect(csv).toContain('"\'=unsafe formula"');
+  expect(csv).toContain('"C","Yes","NA","NA","NA","NA","NA","NA","NA"');
+  expect(csv.match(/"Default Problem"/g)).toHaveLength(1);
+});
+
+it("exports zero grades, safe topic names, and no unattempted problem rows", () => {
   const categories = [
     makeCategory('Trees, "binary"\nDFS'),
     makeCategory("=SUM(1+1)"),
     makeCategory("Empty"),
   ];
-  const rows = buildTopicStats(categories, [
-    makeProblem({ categoryIds: [categories[0]!._id], attemptCount: 1, latestGrade: "F" }),
+  const problem = makeProblem({
+    categoryIds: [categories[0]!._id],
+    attemptCount: 1,
+    latestGrade: "F",
+  });
+  const csv = topicsCsv(buildTopicStats(categories, [problem]), [
+    { problem: makeProblem(), attempts: [] },
   ]);
-  const csv = topicsCsv(rows, new Date("2026-09-24T12:00:00Z"));
-  expect(csv).toContain('"Trees, ""binary""\nDFS","1","1","1","1","0.00"');
+  expect(csv).toContain('"Trees, ""binary""\nDFS","1","1","0.00"');
   expect(csv).toContain('"\'=SUM(1+1)"');
-  expect(csv).toContain('"Empty","0","0","0","0",""');
-  expect(csv).toContain("2026-09-24T12:00:00.000Z");
-  expect(csv).toContain("A=4 B=3 C=2 D=1 F=0");
-  expect(csv).toContain("multi-topic questions count in each topic");
-});
-
-it("appends exactly five rows per problem, keeps full notes, and pads absent attempts", () => {
-  const problem = makeProblem();
-  const csv = topicsCsv(buildTopicStats([], [problem]), new Date("2026-09-24T12:00:00Z"), [
-    {
-      problem,
-      attempts: [
-        makeAttempt(3, 'Used "DFS", then BFS\nReview recursion → stack'),
-        makeAttempt(2, "=unsafe formula"),
-        makeAttempt(1, ""),
-      ],
-    },
-  ]);
-  expect(csv).toContain('"Attempt notes"');
-  expect(csv.match(/"Problem attempt"/g)).toHaveLength(5);
-  expect(csv).toContain(
-    '"1","attempt-3","2026-09-03T00:00:00.000Z","C","Yes","Used ""DFS"", then BFS\nReview recursion → stack"',
-  );
-  expect(csv).toContain('"2","attempt-2","2026-09-02T00:00:00.000Z","C","Yes","\'=unsafe formula"');
-  expect(csv).toContain('"3","attempt-1","2026-09-01T00:00:00.000Z","C","Yes","NA"');
-  expect(csv).toContain('"4","NA","NA","NA","NA","NA"');
-  expect(csv).toContain('"5","NA","NA","NA","NA","NA"');
-});
-
-it("never exports more than five attempts and gives every record the same column count", () => {
-  const problem = makeProblem();
-  const csv = topicsCsv(buildTopicStats([], [problem]), new Date(), [
-    { problem, attempts: Array.from({ length: 7 }, (_, index) => makeAttempt(7 - index)) },
-  ]);
-  const lines = csv.trim().split("\r\n");
-  expect(lines).toHaveLength(7);
-  expect(new Set(lines.map((line) => line.split('","').length))).toEqual(new Set([21]));
-  expect(csv).toContain('"attempt-7"');
-  expect(csv).toContain('"attempt-3"');
-  expect(csv).not.toContain('"attempt-2"');
-  expect(csv).not.toContain('"attempt-1"');
+  expect(csv).toContain('"Empty","0","0","NA"');
+  expect(csv).not.toContain('"Default Problem"');
 });

@@ -84,74 +84,58 @@ const escape = (value: string | number) => {
   return `"${safe.replaceAll('"', '""')}"`;
 };
 
-export function topicsCsv(
-  rows: TopicStats[],
-  exportedAt = new Date(),
-  histories: ProblemAttempts[] = [],
-) {
+export function topicsCsv(rows: TopicStats[], histories: ProblemAttempts[] = []) {
+  const problemHeader = [
+    "Problem",
+    "Problem URL",
+    "Difficulty",
+    "Topics",
+    "Latest grade",
+    "Total attempts",
+    ...Array.from({ length: 5 }, (_, index) => [
+      `Attempt grade ${index + 1}`,
+      `Review again ${index + 1}`,
+      `Attempt notes ${index + 1}`,
+    ]).flat(),
+  ];
+  const contents: (string | number)[][] = [
+    ["Topic", "Questions attempted", "Total attempts", "Average latest grade (0-4)"],
+    ...rows.map((row) => [row.name, row.attempted, row.attempts, row.average?.toFixed(2) ?? "NA"]),
+    [],
+    problemHeader,
+    ...histories
+      .filter(({ attempts }) => attempts.length > 0)
+      .map(({ problem, attempts }) => {
+        const row: (string | number)[] = [
+          problem.name,
+          problem.url,
+          problem.difficulty,
+          problem.categories.map((category) => category.name).join("; ") || "Uncategorized",
+          attempts[0]?.grade ?? "NA",
+          problem.attemptCount,
+        ];
+        row.push(
+          ...Array.from({ length: 5 }, (_, index) => {
+            const attempt = attempts[index];
+            return [
+              attempt?.grade ?? "NA",
+              attempt ? (attempt.shouldReviewAgain ? "Yes" : "No") : "NA",
+              attempt?.notes || "NA",
+            ];
+          }).flat(),
+        );
+        return row;
+      }),
+  ];
+  // Two clearly separated tables, with blank trailing cells for CSV readers.
   return (
-    [
-      [
-        "Topic",
-        "Questions in library",
-        "Unique questions attempted",
-        "Total attempts",
-        "Questions with latest grade",
-        "Average latest grade (0-4)",
-        "Flagged for review",
-        "Focus",
-        "Exported at (UTC)",
-        "Methodology",
-        "Record type",
-        "Problem ID",
-        "Problem",
-        "Problem URL",
-        "Difficulty",
-        "Recent attempt slot (1 = newest)",
-        "Attempt ID",
-        "Attempt date (UTC)",
-        "Attempt grade",
-        "Review again",
-        "Attempt notes",
-      ],
-      ...rows.map((row) => [
-        row.name,
-        row.questions,
-        row.attempted,
-        row.attempts,
-        row.graded,
-        row.average?.toFixed(2) ?? "",
-        row.toReview,
-        topicFocus(row),
-        exportedAt.toISOString(),
-        "All-time; one latest grade per attempted question; A=4 B=3 C=2 D=1 F=0; ungraded excluded; multi-topic questions count in each topic; needs practice below 2.5; topics are assigned categories",
-        "Topic summary",
-        ...Array<string>(10).fill("NA"),
-      ]),
-      ...histories.flatMap(({ problem, attempts }) =>
-        Array.from({ length: 5 }, (_, index) => {
-          const attempt = attempts[index];
-          return [
-            problem.categories.map((category) => category.name).join("; ") || "Uncategorized",
-            ...Array<string>(7).fill("NA"),
-            exportedAt.toISOString(),
-            "Latest five attempts per problem by attempt date, newest first; slot 1 is newest, not lifetime attempt number; NA means missing attempt or empty notes; summaries use all-time latest grades; notes are recorded per attempt",
-            "Problem attempt",
-            problem._id,
-            problem.name,
-            problem.url,
-            problem.difficulty,
-            index + 1,
-            attempt?._id ?? "NA",
-            attempt ? new Date(attempt.attemptedAt).toISOString() : "NA",
-            attempt?.grade ?? "NA",
-            attempt ? (attempt.shouldReviewAgain ? "Yes" : "No") : "NA",
-            attempt?.notes || "NA",
-          ];
-        }),
-      ),
-    ]
-      .map((row) => row.map(escape).join(","))
+    contents
+      .map((row) =>
+        row
+          .concat(Array<string>(problemHeader.length - row.length).fill(""))
+          .map(escape)
+          .join(","),
+      )
       .join("\r\n") + "\r\n"
   );
 }
@@ -159,7 +143,7 @@ export function topicsCsv(
 export function downloadTopicsCsv(rows: TopicStats[], histories: ProblemAttempts[] = []) {
   const now = new Date();
   const url = URL.createObjectURL(
-    new Blob(["\uFEFF", topicsCsv(rows, now, histories)], { type: "text/csv;charset=utf-8" }),
+    new Blob(["\uFEFF", topicsCsv(rows, histories)], { type: "text/csv;charset=utf-8" }),
   );
   const link = document.createElement("a");
   link.href = url;
